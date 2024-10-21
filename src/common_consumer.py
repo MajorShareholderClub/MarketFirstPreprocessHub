@@ -19,16 +19,23 @@ class CommoneConsumerSettingProcesser(AsyncKafkaHandler):
     def __init__(
         self,
         consumer_topic: str,
-        partition: int | None,
-        producer_topic: str = "TestOrderBookProcessing",
+        producer_topic: str,
+        group_id: str,
+        c_partition: int | None,
+        p_partition: int | None,
         batch_size: int = 10,
         batch_timeout: float = 1.0,
     ) -> None:
-        super().__init__(consumer_topic=consumer_topic, partition=partition)
+        super().__init__(
+            consumer_topic=consumer_topic,
+            c_partition=c_partition,
+            group_id=group_id,
+        )
         tracemalloc.start()
         self.producer_topic: Final[str] = producer_topic
         self.batch_size: Final[int] = batch_size
         self.batch_timeout: Final[float] = batch_timeout
+        self.p_partition: Final[int | None] = p_partition  # 파티션 저장
 
     @abstractmethod
     def calculate_total_bid_ask(self, orderbook: OrderBookData) -> ProcessedOrderBook:
@@ -93,7 +100,9 @@ class CommoneConsumerSettingProcesser(AsyncKafkaHandler):
                 for processed_data in processed_data_list:
 
                     await producer.send_and_wait(
-                        self.producer_topic, value=processed_data
+                        self.producer_topic,
+                        value=processed_data,
+                        partition=self.p_partition,
                     )
 
                 logger.info(f"{len(batch)} 메시지를 처리했습니다")

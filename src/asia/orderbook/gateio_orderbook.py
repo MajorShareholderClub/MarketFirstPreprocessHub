@@ -33,10 +33,20 @@ class GateIOAsyncOrderbookProcessor(CommoneConsumerSettingProcesser):
             )
 
 
-async def gateio_orderbook_cp(consumer_topic: str, partition: int) -> None:
+async def gateio_orderbook_cp(
+    consumer_topic: str,
+    c_partition: int,
+    group_id: str,
+    producer_topic: str,
+    p_partition: int,
+) -> None:
     """시작점"""
     processor = GateIOAsyncOrderbookProcessor(
-        consumer_topic=consumer_topic, partition=partition
+        consumer_topic=consumer_topic,
+        c_partition=c_partition,
+        group_id=group_id,
+        producer_topic=producer_topic,
+        p_partition=p_partition,
     )
     await processor.initialize()
     try:

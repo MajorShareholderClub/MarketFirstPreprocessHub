@@ -27,15 +27,15 @@ class AsyncKafkaHandler:
 
     def __init__(
         self,
-        partition: int | None = None,
+        group_id: str,
+        c_partition: int | None = None,
         bootstrap_servers: str = "kafka1:19092,kafka2:29092,kafka3:39092",
         consumer_topic: str | None = None,
-        group_id: str = "orderbook_group",
     ) -> None:
         self.bootstrap_servers: Final[str] = bootstrap_servers
         self.consumer_topic: Final[str | None] = consumer_topic
         self.group_id: Final[str] = group_id
-        self.partition: Final[int | None] = partition  # 파티션 저장
+        self.c_partition: Final[int | None] = c_partition  # 파티션 저장
 
         self.consumer: AIOKafkaConsumer | None = None
         self.producer: AIOKafkaProducer | None = None
@@ -56,11 +56,11 @@ class AsyncKafkaHandler:
             logger.info(f"소비자가 초기화되었습니다: {self.consumer_topic}")
 
             # 특정 파티션만 할당
-            if self.partition is not None:
-                partition = TopicPartition(self.consumer_topic, self.partition)
+            if self.c_partition is not None:
+                partition = TopicPartition(self.consumer_topic, self.c_partition)
                 self.consumer.assign([partition])  # 특정 파티션 할당
                 logger.info(
-                    f"{self.consumer_topic}의 파티션 {self.partition}을 소비합니다."
+                    f"{self.consumer_topic}의 파티션 {self.c_partition}을 소비합니다."
                 )
             else:
                 # partition 이 None일 경우 전체를 구독 예외 로직
@@ -71,6 +71,11 @@ class AsyncKafkaHandler:
         self.producer = AIOKafkaProducer(
             bootstrap_servers=self.bootstrap_servers,
             value_serializer=lambda x: json.dumps(x).encode("utf-8"),
+            max_batch_size=1000000,
+            max_request_size=1000000,
+            enable_idempotence=True,
+            retry_backoff_ms=100,
+            acks=-1,
         )
         await self.producer.start()
         logger.info("생산자가 초기화되었습니다")

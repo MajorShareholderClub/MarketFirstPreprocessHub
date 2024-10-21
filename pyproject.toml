@@ -19,6 +19,7 @@ mmh3 = "^5.0.1"
 pyyaml = "^6.0.2"
 aiohttp = "^3.10.10"
 setuptools = "^75.2.0"
+tenacity = "^9.0.0"
 
 
 [build-system]

@@ -29,21 +29,31 @@ class CoinoneKorbitAsyncOrderbookProcessor(CommoneConsumerSettingProcesser):
             return (float(item["price"]), float(item.get("amount") or item.get("qty")))
 
         for record_str in orderbook_data["data"]:
-            recode: OrderEntry = json.loads(record_str)
-            ask_data = [price_amount(item=item) for item in recode["data"]["asks"]]
-            bid_data = [price_amount(item=item) for item in recode["data"]["bids"]]
+            record: OrderEntry = json.loads(record_str)
+            ask_data = [price_amount(item=item) for item in record["data"]["asks"]]
+            bid_data = [price_amount(item=item) for item in record["data"]["bids"]]
 
             return self.orderbook_common_precessing(
                 bid_data=bid_data,
                 ask_data=ask_data,
-                timestamp=recode.get("timestamp", None),
+                timestamp=record.get("timestamp", None),
             )
 
 
-async def onekorbit_orderbook_cp(consumer_topic: str, partition: int) -> None:
+async def onekorbit_orderbook_cp(
+    consumer_topic: str,
+    c_partition: int,
+    group_id: str,
+    producer_topic: str,
+    p_partition: int,
+) -> None:
     """시작점"""
     processor = CoinoneKorbitAsyncOrderbookProcessor(
-        consumer_topic=consumer_topic, partition=partition
+        consumer_topic=consumer_topic,
+        c_partition=c_partition,
+        group_id=group_id,
+        producer_topic=producer_topic,
+        p_partition=p_partition,
     )
     await processor.initialize()
     try:
