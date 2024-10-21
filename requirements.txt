@@ -1,0 +1,13 @@
+pandas
+numpy
+confluent-kafka
+pydantic
+aiokafka
+cctx
+kafka-python-ng
+kafka-python
+mmh3
+pyyaml
+aiohttp
+setuptools
+aiokafka

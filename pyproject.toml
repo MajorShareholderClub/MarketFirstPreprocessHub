@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "marketfirstpreprocesshub"
+version = "0.1.0"
+description = ""
+authors = ["skip"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.12.7"
+pandas = "^2.2.3"
+numpy = "^2.1.2"
+confluent-kafka = "^2.6.0"
+pydantic = "^2.9.2"
+aiokafka = "^0.11.0"
+cctx = "^1.0.0"
+kafka-python-ng = "^2.2.3"
+kafka-python = "^2.0.2"
+mmh3 = "^5.0.1"
+pyyaml = "^6.0.2"
+aiohttp = "^3.10.10"
+setuptools = "^75.2.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
