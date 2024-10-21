@@ -1,5 +1,5 @@
 from abc import abstractmethod
-import json
+from datetime import datetime, timezone
 import tracemalloc
 import asyncio
 from typing import Final
@@ -23,6 +23,7 @@ class CommoneConsumerSettingProcesser(AsyncKafkaHandler):
         group_id: str,
         c_partition: int | None,
         p_partition: int | None,
+        p_key: str | None,
         batch_size: int = 10,
         batch_timeout: float = 1.0,
     ) -> None:
@@ -36,14 +37,13 @@ class CommoneConsumerSettingProcesser(AsyncKafkaHandler):
         self.batch_size: Final[int] = batch_size
         self.batch_timeout: Final[float] = batch_timeout
         self.p_partition: Final[int | None] = p_partition  # 파티션 저장
+        self.p_key = p_key
 
     @abstractmethod
     def calculate_total_bid_ask(self, orderbook: OrderBookData) -> ProcessedOrderBook:
         pass
 
-    def orderbook_common_precessing(
-        self, bid_data, ask_data, timestamp: str
-    ) -> ProcessedOrderBook:
+    def orderbook_common_precessing(self, bid_data, ask_data) -> ProcessedOrderBook:
         totals: defaultdict[str, float] = defaultdict(float)
         highest_bid: float | None = None  # 최고 매수 가격
         lowest_ask: float | None = None  # 최저 매도 가격
@@ -72,7 +72,7 @@ class CommoneConsumerSettingProcesser(AsyncKafkaHandler):
             spread=spread,
             total_bid_volume=totals["bid"],
             total_ask_volume=totals["ask"],
-            timestamp=timestamp,
+            timestamp=str(datetime.now(timezone.utc)),
         )
 
     async def processing_message(
@@ -98,11 +98,11 @@ class CommoneConsumerSettingProcesser(AsyncKafkaHandler):
 
                 # 모든 processed_data를 프로듀서에 전송
                 for processed_data in processed_data_list:
-
                     await producer.send_and_wait(
                         self.producer_topic,
                         value=processed_data,
                         partition=self.p_partition,
+                        key=self.p_key,
                     )
 
                 logger.info(f"{len(batch)} 메시지를 처리했습니다")

@@ -116,6 +116,7 @@ class RegionOrderbookProcessor:
                 consumer_topic=f"{region.lower()}SocketDataIn{self.symbol.upper()}",
                 c_partition=config.c_partition,
                 p_partition=config.p_partition,
+                p_key=f"{region.lower()}{config.name}:Orderbook{self.symbol.upper()}",
                 producer_topic=f"{region}{self.producer_topic}{self.symbol.upper()}",
                 group_id=f"{region}{self.group_id}",
             )
@@ -149,7 +150,6 @@ class RegionOrderbookProcessor:
 
             logger.info("처리 완료, 예외 확인 중")
             await self._handle_exceptions(results)
-
         except Exception as e:
             logger.critical(f"주문서 처리 중 심각한 오류 발생: {str(e)}")
             raise

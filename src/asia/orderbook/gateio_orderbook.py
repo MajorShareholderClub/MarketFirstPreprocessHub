@@ -27,9 +27,7 @@ class GateIOAsyncOrderbookProcessor(CommoneConsumerSettingProcesser):
             bid_data = record["result"]["bids"]
             ask_data = record["result"]["asks"]
             return self.orderbook_common_precessing(
-                bid_data=bid_data,
-                ask_data=ask_data,
-                timestamp=record.get("time", None),
+                bid_data=bid_data, ask_data=ask_data
             )
 
 
@@ -39,6 +37,7 @@ async def gateio_orderbook_cp(
     group_id: str,
     producer_topic: str,
     p_partition: int,
+    p_key: str,
 ) -> None:
     """시작점"""
     processor = GateIOAsyncOrderbookProcessor(
@@ -47,6 +46,7 @@ async def gateio_orderbook_cp(
         group_id=group_id,
         producer_topic=producer_topic,
         p_partition=p_partition,
+        p_key=p_key,
     )
     await processor.initialize()
     try:

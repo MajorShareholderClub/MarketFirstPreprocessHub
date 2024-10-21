@@ -28,9 +28,7 @@ class UpBithumbAsyncOrderbookProcessor(CommoneConsumerSettingProcesser):
             bid_data = [(entry["bid_price"], entry["bid_size"]) for entry in unit_data]
             ask_data = [(entry["ask_price"], entry["ask_size"]) for entry in unit_data]
             return self.orderbook_common_precessing(
-                bid_data=bid_data,
-                ask_data=ask_data,
-                timestamp=record_str.get("timestamp", None),
+                bid_data=bid_data, ask_data=ask_data
             )
 
 
@@ -40,6 +38,7 @@ async def upbithumb_orderbook_cp(
     group_id: str,
     producer_topic: str,
     p_partition: int,
+    p_key: str,
 ) -> None:
     """시작점"""
     processor = UpBithumbAsyncOrderbookProcessor(
@@ -48,6 +47,7 @@ async def upbithumb_orderbook_cp(
         group_id=group_id,
         producer_topic=producer_topic,
         p_partition=p_partition,
+        p_key=p_key,
     )
     await processor.initialize()
     try:

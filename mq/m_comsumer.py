@@ -70,6 +70,7 @@ class AsyncKafkaHandler:
 
         self.producer = AIOKafkaProducer(
             bootstrap_servers=self.bootstrap_servers,
+            key_serializer=lambda x: json.dumps(x).encode("utf-8"),
             value_serializer=lambda x: json.dumps(x).encode("utf-8"),
             max_batch_size=1000000,
             max_request_size=1000000,
