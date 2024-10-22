@@ -1,6 +1,6 @@
 # 기본 설정
 producer_topic: "TickerPreprocessing"
-group_id: "ticker"
+group_id: "Ticker"
 
 
 # ticker 
