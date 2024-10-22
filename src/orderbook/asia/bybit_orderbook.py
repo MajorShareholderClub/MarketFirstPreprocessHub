@@ -4,9 +4,7 @@ import json
 from src.common_consumer import CommoneConsumerSettingProcesser
 
 from mq.types import OrderBookData, ProcessedOrderBook, OrderEntry
-from mq.exception import (
-    handle_processing_errors,
-)
+from mq.exception import handle_processing_errors
 
 
 class BybitAsyncOrderbookProcessor(CommoneConsumerSettingProcesser):

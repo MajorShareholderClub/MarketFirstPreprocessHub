@@ -1,19 +1,20 @@
 import asyncio
 import logging
-import yaml
+from typing import Awaitable
 from dataclasses import dataclass
+
 from enum import Enum
 from tenacity import retry, stop_after_attempt, wait_exponential
-from typing import Awaitable
 
 # 거래소 주문서 처리기 임포트
-from src.asia.orderbook.okx_orderbook import okx_orderbook_cp
-from src.asia.orderbook.bybit_orderbook import bybit_orderbook_cp
-from src.asia.orderbook.gateio_orderbook import gateio_orderbook_cp
-from src.korea.orderbook.upbithumb_orderbook import upbithumb_orderbook_cp
-from src.korea.orderbook.onekorbit_orderbook import onekorbit_orderbook_cp
-from src.ne.orderbook.binance_orderbook import binance_orderbook_cp
-from src.ne.orderbook.kraken_orderbook import kraken_orderbook_cp
+from setting.yml_load import OrderbookProcessorConfig
+from src.orderbook.asia.okx_orderbook import okx_orderbook_cp
+from src.orderbook.asia.bybit_orderbook import bybit_orderbook_cp
+from src.orderbook.asia.gateio_orderbook import gateio_orderbook_cp
+from src.orderbook.korea.upbithumb_orderbook import upbithumb_orderbook_cp
+from src.orderbook.korea.onekorbit_orderbook import onekorbit_orderbook_cp
+from src.orderbook.ne.binance_orderbook import binance_orderbook_cp
+from src.orderbook.ne.kraken_orderbook import kraken_orderbook_cp
 
 # 로깅 설정
 logging.basicConfig(
@@ -45,33 +46,6 @@ class ExchangeConfig:
     processor: OrderbookProcessor
 
 
-class OrderbookProcessorConfig:
-    """주문서 처리기 설정 관리 클래스"""
-
-    def __init__(self, config_path: str = "setting/config.yaml") -> None:
-        self.config_path = config_path
-        self._load_config()
-
-    def _load_config(self) -> None:
-        """설정 파일 로드"""
-        try:
-            with open(self.config_path, "r", encoding="utf-8") as f:
-                self.config = yaml.safe_load(f)
-        except Exception as e:
-            logger.error(f"설정 파일 로드 실패: {e}")
-            self.config = {}
-
-    @property
-    def producer_topic(self) -> str:
-        """프로듀서 토픽 설정값 반환"""
-        return self.config.get("producer_topic", "OrderbookPreprocessing")
-
-    @property
-    def group_id(self) -> str:
-        """그룹 ID 설정값 반환"""
-        return self.config.get("group_id", "orderbook")
-
-
 class RegionOrderbookProcessor:
     """주문서 처리 메인 클래스"""
 
@@ -94,7 +68,7 @@ class RegionOrderbookProcessor:
         },
     }
 
-    def __init__(self, symbol: str, config_path: str = "config.yaml") -> None:
+    def __init__(self, symbol: str, config_path: str = "setting/config.yaml") -> None:
         self.config = OrderbookProcessorConfig(config_path)
         self.producer_topic = self.config.producer_topic
         self.group_id = self.config.group_id

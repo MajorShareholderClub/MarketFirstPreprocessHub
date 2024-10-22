@@ -24,3 +24,8 @@ class ProcessedOrderBook(TypedDict):
     bid_order_count: int | None  # 총 매수 주문량
     ask_order_count: int | None  # 총 매도 주문량
     timestamp: int | None  # 타임스탬프
+
+
+ExchangeResponseData = dict[str, str | int | float | dict[str, int | str]]
+ExchangeOrderingData = dict[str, int]
+ResponseData = ExchangeResponseData | ExchangeOrderingData

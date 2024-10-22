@@ -1,0 +1,90 @@
+# 기본 설정
+producer_topic: "TickerPreprocessing"
+group_id: "ticker"
+
+
+# ticker 
+okx:
+  parameter:
+    - open24h
+    - last
+    - high24h
+    - low24h
+    - last
+    - vol24h
+
+gateio:
+  parameter:
+    - last
+    - last
+    - high_24h
+    - low_24h
+    - highest_bid
+    - base_volume
+
+bybit:
+  parameter:
+    - lastPrice
+    - lastPrice
+    - highPrice24h
+    - lowPrice24h
+    - prevPrice24h
+    - volume24h
+
+
+
+upbit:
+  parameter:
+    - opening_price
+    - trade_price
+    - high_price
+    - low_price
+    - prev_closing_price
+    - acc_trade_volume_24h
+
+bithumb:
+  parameter:
+    - opening_price
+    - trade_price
+    - high_price
+    - low_price
+    - prev_closing_price
+    - acc_trade_volume_24h
+
+coinone:
+  parameter:
+    - first
+    - last
+    - high
+    - low
+    - yesterday_last
+    - target_volume
+
+korbit:
+  parameter:
+    - open
+    - ask
+    - high
+    - low
+    - last
+    - volume
+
+
+binance:
+  parameter:
+    - o
+    - c
+    - h
+    - l
+    - x
+    - v
+
+kraken:
+  parameter:
+    - last
+    - ask
+    - high
+    - low
+    - last
+    - volume
+    

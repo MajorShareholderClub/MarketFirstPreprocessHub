@@ -43,6 +43,10 @@ class CommoneConsumerSettingProcesser(AsyncKafkaHandler):
     def calculate_total_bid_ask(self, orderbook: OrderBookData) -> ProcessedOrderBook:
         pass
 
+    @abstractmethod
+    def data_task_a_crack_ticker(self, ticker: dict) -> dict:
+        pass
+
     def orderbook_common_precessing(self, bid_data, ask_data) -> ProcessedOrderBook:
         totals: defaultdict[str, float] = defaultdict(float)
         highest_bid: float | None = None  # 최고 매수 가격
@@ -93,7 +97,7 @@ class CommoneConsumerSettingProcesser(AsyncKafkaHandler):
 
             if should_process:
                 processed_data_list: list[ProcessedOrderBook] = [
-                    self.calculate_total_bid_ask(orderbook) for orderbook in batch
+                    self.data_task_a_crack_ticker(orderbook) for orderbook in batch
                 ]
 
                 # 모든 processed_data를 프로듀서에 전송
