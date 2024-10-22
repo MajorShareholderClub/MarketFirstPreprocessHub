@@ -4,15 +4,8 @@ from src.ticker.common_ticker import BaseAsyncTickerProcessor
 
 
 class BinanceAsyncTickerProcessor(BaseAsyncTickerProcessor):
-    def __init__(self) -> None:
-        data = {
-            "consumer_topic": "neSocketDataInBTC",
-            "c_partition": 0,
-            "group_id": "ticker",
-            "producer_topic": "TestProcess",
-            "p_partition": 0,
-            "p_key": "TEst",
-        }
+    def __init__(self, **kafka_meta: dict) -> None:
+        data = kafka_meta
         super().__init__("E", None, **data)
 
     def get_timestamp(self, ticker: dict) -> int:
@@ -23,16 +16,9 @@ class BinanceAsyncTickerProcessor(BaseAsyncTickerProcessor):
         return json.loads(item)
 
 
-class KrakensyncTickerProcessor(BaseAsyncTickerProcessor):
-    def __init__(self) -> None:
-        data = {
-            "consumer_topic": "neSocketDataInBTC",
-            "c_partition": 2,
-            "group_id": "ticker",
-            "producer_topic": "TestProcess",
-            "p_partition": 0,
-            "p_key": "TEst",
-        }
+class KrakenAsyncTickerProcessor(BaseAsyncTickerProcessor):
+    def __init__(self, **kafka_meta: dict) -> None:
+        data = kafka_meta
         super().__init__(None, "data", **data)
 
     def get_timestamp(self, ticker: str) -> int:
@@ -40,13 +26,3 @@ class KrakensyncTickerProcessor(BaseAsyncTickerProcessor):
 
     def get_data(self, item: dict) -> dict:
         return json.loads(item)[self.data_collect][0]
-
-
-async def process_ticker_cp(process) -> None:
-    processor = process()
-
-    await processor.initialize()
-    try:
-        await processor.batch_process_messages()
-    finally:
-        await processor.cleanup()

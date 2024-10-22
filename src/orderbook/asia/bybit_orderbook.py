@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
-from src.common_consumer import CommoneConsumerSettingProcesser
+from src.common_consumer import CommonConsumerSettingProcessor
 
 from mq.types import OrderBookData, ProcessedOrderBook, OrderEntry
 from mq.exception import handle_processing_errors
 
 
-class BybitAsyncOrderbookProcessor(CommoneConsumerSettingProcesser):
+class BybitAsyncOrderbookProcessor(CommonConsumerSettingProcessor):
     """비동기 주문서 데이터를 처리하는 클래스."""
 
     @handle_processing_errors
@@ -24,7 +24,8 @@ class BybitAsyncOrderbookProcessor(CommoneConsumerSettingProcesser):
             record: OrderEntry = json.loads(record_str)
             bid_data = record["data"]["b"]
             ask_data = record["data"]["a"]
-            return self.orderbook_common_precessing(
+
+            return self.orderbook_common_processing(
                 bid_data=bid_data, ask_data=ask_data
             )
 
@@ -48,6 +49,6 @@ async def bybit_orderbook_cp(
     )
     await processor.initialize()
     try:
-        await processor.batch_process_messages()
+        await processor.batch_process_messages(target="orderbook")
     finally:
         await processor.cleanup()
