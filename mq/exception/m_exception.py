@@ -48,7 +48,11 @@ def handle_kafka_errors(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitabl
                 case ValueError():
                     logger.error(f"값 오류: {str(e)}")
                 case _:
-                    logger.error(f"예상치 못한 오류: {str(e)}")
+                    import traceback
+
+                    logger.error(
+                        f"예상치 못한 오류: {str(e)} --> {traceback.print_exc()}"
+                    )
 
     return wrapper
 
@@ -69,8 +73,11 @@ def handle_processing_errors(func: Callable[P, R]) -> Callable[P, R]:
                         ErrorType.PROCESSING, f"값 변환 오류: {str(e)}"
                     )
                 case _:
+                    import traceback
+
                     raise KafkaProcessingError(
-                        ErrorType.PROCESSING, f"알 수 없는 처리 오류: {str(e)}"
+                        ErrorType.PROCESSING,
+                        f"알 수 없는 처리 오류: {str(e)} -> {traceback.print_exc()}",
                     )
 
     return wrapper

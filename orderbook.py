@@ -1,19 +1,20 @@
 import asyncio
 import logging
-import yaml
+from typing import Awaitable
 from dataclasses import dataclass
+
 from enum import Enum
 from tenacity import retry, stop_after_attempt, wait_exponential
-from typing import Awaitable
 
 # 거래소 주문서 처리기 임포트
-from src.asia.orderbook.okx_orderbook import okx_orderbook_cp
-from src.asia.orderbook.bybit_orderbook import bybit_orderbook_cp
-from src.asia.orderbook.gateio_orderbook import gateio_orderbook_cp
-from src.korea.orderbook.upbithumb_orderbook import upbithumb_orderbook_cp
-from src.korea.orderbook.onekorbit_orderbook import onekorbit_orderbook_cp
-from src.ne.orderbook.binance_orderbook import binance_orderbook_cp
-from src.ne.orderbook.kraken_orderbook import kraken_orderbook_cp
+from setting.yml_load import OrderbookProcessorConfig
+from src.orderbook.asia.okx_orderbook import okx_orderbook_cp
+from src.orderbook.asia.bybit_orderbook import bybit_orderbook_cp
+from src.orderbook.asia.gateio_orderbook import gateio_orderbook_cp
+from src.orderbook.korea.upbithumb_orderbook import upbithumb_orderbook_cp
+from src.orderbook.korea.onekorbit_orderbook import onekorbit_orderbook_cp
+from src.orderbook.ne.binance_orderbook import binance_orderbook_cp
+from src.orderbook.ne.kraken_orderbook import kraken_orderbook_cp
 
 # 로깅 설정
 logging.basicConfig(
@@ -45,60 +46,32 @@ class ExchangeConfig:
     processor: OrderbookProcessor
 
 
-class OrderbookProcessorConfig:
-    """주문서 처리기 설정 관리 클래스"""
-
-    def __init__(self, config_path: str = "setting/config.yaml") -> None:
-        self.config_path = config_path
-        self._load_config()
-
-    def _load_config(self) -> None:
-        """설정 파일 로드"""
-        try:
-            with open(self.config_path, "r", encoding="utf-8") as f:
-                self.config = yaml.safe_load(f)
-        except Exception as e:
-            logger.error(f"설정 파일 로드 실패: {e}")
-            self.config = {}
-
-    @property
-    def producer_topic(self) -> str:
-        """프로듀서 토픽 설정값 반환"""
-        return self.config.get("producer_topic", "OrderbookPreprocessing")
-
-    @property
-    def group_id(self) -> str:
-        """그룹 ID 설정값 반환"""
-        return self.config.get("group_id", "orderbook")
-
-
 class RegionOrderbookProcessor:
     """주문서 처리 메인 클래스"""
 
     # 거래소 설정
     EXCHANGE_CONFIGS: dict[Region, dict[str, ExchangeConfig]] = {
         Region.KOREA: {
-            "upbit": ExchangeConfig("upbit", 1, 1, upbithumb_orderbook_cp),
-            "bithumb": ExchangeConfig("bithumb", 3, 3, upbithumb_orderbook_cp),
-            "coinone": ExchangeConfig("coinone", 5, 5, onekorbit_orderbook_cp),
-            "korbit": ExchangeConfig("korbit", 7, 7, onekorbit_orderbook_cp),
+            "upbit": ExchangeConfig("upbit", 1, 0, upbithumb_orderbook_cp),
+            "bithumb": ExchangeConfig("bithumb", 3, 1, upbithumb_orderbook_cp),
+            "coinone": ExchangeConfig("coinone", 5, 2, onekorbit_orderbook_cp),
+            "korbit": ExchangeConfig("korbit", 7, 3, onekorbit_orderbook_cp),
         },
         Region.ASIA: {
-            "okx": ExchangeConfig("okx", 1, 1, okx_orderbook_cp),
-            "bybit": ExchangeConfig("bybit", 3, 3, bybit_orderbook_cp),
-            "gateio": ExchangeConfig("gateio", 5, 5, gateio_orderbook_cp),
+            "okx": ExchangeConfig("okx", 1, 0, okx_orderbook_cp),
+            "bybit": ExchangeConfig("bybit", 3, 1, bybit_orderbook_cp),
+            "gateio": ExchangeConfig("gateio", 5, 2, gateio_orderbook_cp),
         },
         Region.NE: {
-            "binance": ExchangeConfig("binance", 1, 1, binance_orderbook_cp),
-            "kraken": ExchangeConfig("kraken", 3, 3, kraken_orderbook_cp),
+            "binance": ExchangeConfig("binance", 1, 0, binance_orderbook_cp),
+            "kraken": ExchangeConfig("kraken", 3, 1, kraken_orderbook_cp),
         },
     }
 
-    def __init__(self, symbol: str, config_path: str = "config.yaml") -> None:
+    def __init__(self, config_path: str = "setting/config.yaml") -> None:
         self.config = OrderbookProcessorConfig(config_path)
         self.producer_topic = self.config.producer_topic
         self.group_id = self.config.group_id
-        self.symbol = symbol
 
     @retry(
         stop=stop_after_attempt(3),
@@ -112,12 +85,13 @@ class RegionOrderbookProcessor:
     ) -> Awaitable[None]:
         """단일 주문서 처리 태스크 생성 (재시도 로직 포함)"""
         try:
+            # Region.Korea_OrderbookPreprocessing
             return await config.processor(
-                consumer_topic=f"{region.lower()}SocketDataIn{self.symbol.upper()}",
+                consumer_topic=f"{region.lower()}SocketDataInBTC",
                 c_partition=config.c_partition,
                 p_partition=config.p_partition,
-                p_key=f"{region.lower()}{config.name}:Orderbook{self.symbol.upper()}",
-                producer_topic=f"{region}{self.producer_topic}{self.symbol.upper()}",
+                p_key=f"{region.lower()}{config.name}:OrderbookPre",
+                producer_topic=f"Region.{region.value}_{self.producer_topic}",
                 group_id=f"{region}{self.group_id}",
             )
         except Exception as e:

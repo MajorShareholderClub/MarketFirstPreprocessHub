@@ -11,31 +11,3 @@ retry_max_wait: 10
 log_level: "INFO"
 log_file: "orderbook_processor.log"
 
-# 거래소별 설정
-exchanges:
-  # 한국 거래소
-  korea:
-    upbit:
-      partition: 1
-    bithumb:
-      partition: 3
-    coinone:
-      partition: 5
-    korbit:
-      partition: 7
-  
-  # 아시아 거래소
-  asia:
-    okx:
-      partition: 1
-    bybit:
-      partition: 3
-    gateio:
-      partition: 5
-  
-  # 북유럽 거래소
-  ne:
-    binance:
-      partition: 1
-    kraken:
-      partition: 3

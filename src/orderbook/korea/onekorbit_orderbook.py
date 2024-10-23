@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 import json
-from src.common_consumer import CommoneConsumerSettingProcesser
+from src.common_consumer import CommonConsumerSettingProcessor
 
 from mq.types import OrderBookData, ProcessedOrderBook, OrderEntry
 from mq.exception import (
@@ -9,7 +7,7 @@ from mq.exception import (
 )
 
 
-class CoinoneKorbitAsyncOrderbookProcessor(CommoneConsumerSettingProcesser):
+class CoinoneKorbitAsyncOrderbookProcessor(CommonConsumerSettingProcessor):
     """비동기 주문서 데이터를 처리하는 클래스."""
 
     @handle_processing_errors
@@ -33,7 +31,7 @@ class CoinoneKorbitAsyncOrderbookProcessor(CommoneConsumerSettingProcesser):
             ask_data = [price_amount(item=item) for item in record["data"]["asks"]]
             bid_data = [price_amount(item=item) for item in record["data"]["bids"]]
 
-            return self.orderbook_common_precessing(
+            return self.orderbook_common_processing(
                 bid_data=bid_data, ask_data=ask_data
             )
 
@@ -57,6 +55,6 @@ async def onekorbit_orderbook_cp(
     )
     await processor.initialize()
     try:
-        await processor.batch_process_messages()
+        await processor.batch_process_messages(target="orderbook")
     finally:
         await processor.cleanup()

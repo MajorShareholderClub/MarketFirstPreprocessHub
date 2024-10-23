@@ -1,15 +1,11 @@
-from __future__ import annotations
-
 import json
-from src.common_consumer import CommoneConsumerSettingProcesser
+from src.common_consumer import CommonConsumerSettingProcessor
 
 from mq.types import OrderBookData, ProcessedOrderBook, OrderEntry
-from mq.exception import (
-    handle_processing_errors,
-)
+from mq.exception import handle_processing_errors
 
 
-class GateIOAsyncOrderbookProcessor(CommoneConsumerSettingProcesser):
+class BybitAsyncOrderbookProcessor(CommonConsumerSettingProcessor):
     """비동기 주문서 데이터를 처리하는 클래스."""
 
     @handle_processing_errors
@@ -24,23 +20,24 @@ class GateIOAsyncOrderbookProcessor(CommoneConsumerSettingProcesser):
         """
         for record_str in orderbook["data"]:
             record: OrderEntry = json.loads(record_str)
-            bid_data = record["result"]["bids"]
-            ask_data = record["result"]["asks"]
-            return self.orderbook_common_precessing(
+            bid_data = record["data"]["b"]
+            ask_data = record["data"]["a"]
+
+            return self.orderbook_common_processing(
                 bid_data=bid_data, ask_data=ask_data
             )
 
 
-async def gateio_orderbook_cp(
+async def bybit_orderbook_cp(
     consumer_topic: str,
     c_partition: int,
-    group_id: str,
-    producer_topic: str,
     p_partition: int,
     p_key: str,
+    group_id: str,
+    producer_topic: str,
 ) -> None:
     """시작점"""
-    processor = GateIOAsyncOrderbookProcessor(
+    processor = BybitAsyncOrderbookProcessor(
         consumer_topic=consumer_topic,
         c_partition=c_partition,
         group_id=group_id,
@@ -50,6 +47,6 @@ async def gateio_orderbook_cp(
     )
     await processor.initialize()
     try:
-        await processor.batch_process_messages()
+        await processor.batch_process_messages(target="orderbook")
     finally:
         await processor.cleanup()
