@@ -1,12 +1,7 @@
-from __future__ import annotations
-
-import json
 from src.common_consumer import CommonConsumerSettingProcessor
 
-from mq.types import OrderBookData, ProcessedOrderBook, OrderEntry
-from mq.exception import (
-    handle_processing_errors,
-)
+from mq.types import OrderBookData, ProcessedOrderBook
+from mq.exception import handle_processing_errors
 
 
 class UpBithumbAsyncOrderbookProcessor(CommonConsumerSettingProcessor):

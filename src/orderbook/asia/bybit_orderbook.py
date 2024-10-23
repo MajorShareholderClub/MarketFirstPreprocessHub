@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 from src.common_consumer import CommonConsumerSettingProcessor
 

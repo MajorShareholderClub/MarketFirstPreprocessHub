@@ -74,6 +74,13 @@ class AsyncKafkaHandler:
                 await self.consumer.start()
                 logger.info(f"소비자가 초기화되었습니다: {self.consumer_topic}")
 
+            # 그룹 메타데이터 확인
+            try:
+                metadata = self.consumer._group_id
+                logger.info(f"Consumer group metadata: {metadata}")
+            except Exception as e:
+                logger.error(f"Failed to get group metadata: {e}")
+
         self.producer = AIOKafkaProducer(
             bootstrap_servers=self.bootstrap_servers,
             key_serializer=lambda x: json.dumps(x).encode("utf-8"),

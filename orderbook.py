@@ -52,27 +52,26 @@ class RegionOrderbookProcessor:
     # 거래소 설정
     EXCHANGE_CONFIGS: dict[Region, dict[str, ExchangeConfig]] = {
         Region.KOREA: {
-            "upbit": ExchangeConfig("upbit", 1, 1, upbithumb_orderbook_cp),
-            "bithumb": ExchangeConfig("bithumb", 3, 3, upbithumb_orderbook_cp),
-            "coinone": ExchangeConfig("coinone", 5, 5, onekorbit_orderbook_cp),
-            "korbit": ExchangeConfig("korbit", 7, 7, onekorbit_orderbook_cp),
+            "upbit": ExchangeConfig("upbit", 1, 0, upbithumb_orderbook_cp),
+            "bithumb": ExchangeConfig("bithumb", 3, 1, upbithumb_orderbook_cp),
+            "coinone": ExchangeConfig("coinone", 5, 2, onekorbit_orderbook_cp),
+            "korbit": ExchangeConfig("korbit", 7, 3, onekorbit_orderbook_cp),
         },
         Region.ASIA: {
-            "okx": ExchangeConfig("okx", 1, 1, okx_orderbook_cp),
-            "bybit": ExchangeConfig("bybit", 3, 3, bybit_orderbook_cp),
-            "gateio": ExchangeConfig("gateio", 5, 5, gateio_orderbook_cp),
+            "okx": ExchangeConfig("okx", 1, 0, okx_orderbook_cp),
+            "bybit": ExchangeConfig("bybit", 3, 1, bybit_orderbook_cp),
+            "gateio": ExchangeConfig("gateio", 5, 2, gateio_orderbook_cp),
         },
         Region.NE: {
-            "binance": ExchangeConfig("binance", 1, 1, binance_orderbook_cp),
-            "kraken": ExchangeConfig("kraken", 3, 3, kraken_orderbook_cp),
+            "binance": ExchangeConfig("binance", 1, 0, binance_orderbook_cp),
+            "kraken": ExchangeConfig("kraken", 3, 1, kraken_orderbook_cp),
         },
     }
 
-    def __init__(self, symbol: str, config_path: str = "setting/config.yaml") -> None:
+    def __init__(self, config_path: str = "setting/config.yaml") -> None:
         self.config = OrderbookProcessorConfig(config_path)
         self.producer_topic = self.config.producer_topic
         self.group_id = self.config.group_id
-        self.symbol = symbol
 
     @retry(
         stop=stop_after_attempt(3),
@@ -86,12 +85,13 @@ class RegionOrderbookProcessor:
     ) -> Awaitable[None]:
         """단일 주문서 처리 태스크 생성 (재시도 로직 포함)"""
         try:
+            # Region.Korea_OrderbookPreprocessing
             return await config.processor(
-                consumer_topic=f"{region.lower()}SocketDataIn{self.symbol.upper()}",
+                consumer_topic=f"{region.lower()}SocketDataInBTC",
                 c_partition=config.c_partition,
                 p_partition=config.p_partition,
-                p_key=f"{region.lower()}{config.name}:Orderbook{self.symbol.upper()}",
-                producer_topic=f"{region}{self.producer_topic}{self.symbol.upper()}",
+                p_key=f"{region.lower()}{config.name}:OrderbookPre",
+                producer_topic=f"Region.{region.value}_{self.producer_topic}",
                 group_id=f"{region}{self.group_id}",
             )
         except Exception as e:
