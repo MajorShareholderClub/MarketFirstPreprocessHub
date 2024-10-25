@@ -5,7 +5,8 @@ import logging
 from typing import Final, TypedDict, Callable, Any
 
 from decimal import Decimal
-from aiokafka import AIOKafkaConsumer, AIOKafkaProducer, TopicPartition
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+
 from mq.exception import handle_kafka_errors
 
 # 로깅 설정
@@ -25,7 +26,7 @@ class KafkaConsumerConfig(TypedDict):
     group_id: str
     auto_offset_reset: str
     enable_auto_commit: bool = True
-    value_deserializer: Callable[[Any], bytes]
+    value_deserializer: Callable[[Any], Any]
 
 
 class AsyncKafkaHandler:
@@ -34,14 +35,12 @@ class AsyncKafkaHandler:
     def __init__(
         self,
         group_id: str,
-        c_partition: int | None = None,
         bootstrap_servers: str = "kafka1:19092,kafka2:29092,kafka3:39092",
         consumer_topic: str | None = None,
     ) -> None:
         self.bootstrap_servers: Final[str] = bootstrap_servers
         self.consumer_topic: Final[str | None] = consumer_topic
         self.group_id: Final[str] = group_id
-        self.c_partition: Final[int | None] = c_partition  # 파티션 저장
 
         self.consumer: AIOKafkaConsumer | None = None
         self.producer: AIOKafkaProducer | None = None
@@ -61,18 +60,8 @@ class AsyncKafkaHandler:
             await self.consumer.start()
             logger.info(f"소비자가 초기화되었습니다: {self.consumer_topic}")
 
-            # 특정 파티션만 할당
-            if self.c_partition is not None:
-                partition = TopicPartition(self.consumer_topic, self.c_partition)
-                self.consumer.assign([partition])  # 특정 파티션 할당
-                logger.info(
-                    f"{self.consumer_topic}의 파티션 {self.c_partition}을 소비합니다."
-                )
-            else:
-                # partition 이 None일 경우 전체를 구독 예외 로직
-                await self.consumer.subscribe([self.consumer_topic])  # 전체 토픽 구독
-                await self.consumer.start()
-                logger.info(f"소비자가 초기화되었습니다: {self.consumer_topic}")
+            # partition 이 None일 경우 전체를 구독 예외 로직
+            self.consumer.subscribe([self.consumer_topic])  # 전체 토픽 구독
 
             # 그룹 메타데이터 확인
             try:

@@ -31,14 +31,12 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
         consumer_topic: str,
         producer_topic: str,
         group_id: str,
-        c_partition: int | None = None,
         p_partition: int | None = None,
         p_key: str | None = None,
         batch_config: BatchConfig | None = None,
     ) -> None:
         super().__init__(
             consumer_topic=consumer_topic,
-            c_partition=c_partition,
             group_id=group_id,
         )
         self.producer_topic: Final[str] = producer_topic
