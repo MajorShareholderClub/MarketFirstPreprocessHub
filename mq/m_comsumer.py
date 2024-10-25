@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from random import randint
 import json
 import logging
 from typing import Final, TypedDict, Callable, Any
@@ -24,6 +25,7 @@ def default(obj: Any):
 class KafkaConsumerConfig(TypedDict):
     bootstrap_servers: str
     group_id: str
+    client_id: str
     auto_offset_reset: str
     enable_auto_commit: bool = True
     value_deserializer: Callable[[Any], Any]
@@ -48,10 +50,12 @@ class AsyncKafkaHandler:
     @handle_kafka_errors
     async def initialize(self) -> None:
         """Kafka 소비자 및 생산자 연결 초기화"""
+        group_id_split: list[str] = self.group_id.split("_")
         if self.consumer_topic:
             config = KafkaConsumerConfig(
                 bootstrap_servers=self.bootstrap_servers,
                 group_id=self.group_id,
+                client_id=f"{group_id_split[-1]}-client-{group_id_split[0]}-{randint(1, 100)}",
                 auto_offset_reset="earliest",
                 enable_auto_commit=True,
                 value_deserializer=lambda x: json.loads(x.decode("utf-8")),

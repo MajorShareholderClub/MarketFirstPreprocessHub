@@ -31,6 +31,7 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
         consumer_topic: str,
         producer_topic: str,
         group_id: str,
+        c_partition: int | None = None,
         p_partition: int | None = None,
         p_key: str | None = None,
         batch_config: BatchConfig | None = None,
@@ -41,8 +42,9 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
         )
         self.producer_topic: Final[str] = producer_topic
         self.p_partition: Final[int | None] = p_partition
+        self.c_partition: Final[int | None] = c_partition
         self.p_key: Final[str | None] = p_key
-        self.batch_config = batch_config or BatchConfig(size=20, timeout=2.0)
+        self.batch_config = batch_config or BatchConfig(size=20, timeout=10.0)
 
         self._process_map = {
             "orderbook": self.calculate_total_bid_ask,
@@ -127,22 +129,26 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
         last_process_time = asyncio.get_event_loop().time()
 
         async for message in consumer:
-            batch.append(message.value)
-            current_time = asyncio.get_event_loop().time()
+            if message.partition == self.c_partition:
+                logger.info(
+                    f"{consumer._client._client_id} 는 --> {self.c_partition}를 소모합니다"
+                )
+                batch.append(message.value)
+                current_time = asyncio.get_event_loop().time()
 
-            if (
-                len(batch) >= self.batch_config.size
-                or current_time - last_process_time >= self.batch_config.timeout
-            ):
+                if (
+                    len(batch) >= self.batch_config.size
+                    or current_time - last_process_time >= self.batch_config.timeout
+                ):
 
-                # 데이터 처리
-                processed_batch = [process(data) for data in batch]
+                    # 데이터 처리
+                    processed_batch = [process(data) for data in batch]
 
-                # Kafka로 전송
-                await self._send_batch_to_kafka(producer, processed_batch)
+                    # Kafka로 전송
+                    await self._send_batch_to_kafka(producer, processed_batch)
 
-                batch.clear()
-                last_process_time = current_time
+                    batch.clear()
+                    last_process_time = current_time
 
     @handle_kafka_errors
     async def batch_process_messages(self, target: str) -> None:

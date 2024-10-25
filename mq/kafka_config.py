@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 @dataclass(frozen=True)
 class KafkaConfig:
     consumer_topic: str
-    c_partition: int
     p_partition: int
+    c_partition: int
     group_id: str
     producer_topic: str
     p_key: str
@@ -63,7 +63,7 @@ class KafkaConfigExchange(Enum):
     def group_id(self) -> str:
         """Kafka consumer group id"""
         group_id = self.config.group_id
-        return f"{group_id}_ticker_group_id"
+        return f"{group_id}_ticker_group_id_{self.region.value}"
 
     @property
     def product_topic_name(self) -> str:
@@ -76,8 +76,8 @@ class KafkaConfigExchange(Enum):
         return asdict(
             KafkaConfig(
                 consumer_topic=f"{self.region.name.lower()}SocketDataInBTC",
-                c_partition=self.c_partition,
                 p_partition=self.p_partition,
+                c_partition=self.c_partition,
                 producer_topic=self.product_topic_name,
                 group_id=self.group_id,
                 p_key=f"{self.exchange_name.capitalize()}Ticker{self.exchange_name.upper()}",
