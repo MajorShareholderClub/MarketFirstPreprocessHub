@@ -34,11 +34,26 @@
         - 바이낸스
         - 크라켄
 
+## Group-id
+- 각 partition 별 group id 생성하여 병렬 consumer group 생성
+- **ticker**:
+    - `Ticker_group_id_Asia`
+    - `Ticker_group_id_Korea`
+    - `Ticker_group_id_NE`
+- **Orderbook**:
+    - `Orderbook_group_id_Asia`
+    - `Orderbook_group_id_Korea`
+    - `Orderbook_group_id_NE`
+
 ## 소모하는 토픽
 - **Ticker**:
-    - `asiaSocketDataInBTC` (partition=6개)
-    - `koraSocketDataInBTC` (partition=8개)
-    - `neSocketDataInBTC`(partition=4개)
+    - `asiaSocketDataInBTC-ticker` (partition=3개)
+    - `koraSocketDataInBTC-ticker` (partition=4개)
+    - `neSocketDataInBTC-ticker`(partition=2개)
+- **Orderbook**:
+    - `asiaSocketDataInBTC-Orderbook` (partition=3개)
+    - `koraSocketDataInBTC-Orderbook` (partition=4개)
+    - `neSocketDataInBTC-Orderbook`(partition=2개)
 
 ## 📥 전처리하고 난 후 보내는 토픽
 - **Ticker**:
@@ -60,7 +75,9 @@
 ## 📊 데이터 포맷
 - **Orderbook**:
 ```json 
-ex = {
+{
+  "market": "OKX",
+  "coin_symbol": "BTC",
   "highest_bid": 66609.22,
   "lowest_ask": 66619.98,
   "spread": 10.759999999994761,
