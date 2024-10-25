@@ -5,14 +5,6 @@ from typing import TypeVar, Generic
 T = TypeVar("T", bound="BaseConfigDetails")
 
 
-class Region(Enum):
-    """거래소 지역 구분"""
-
-    KOREA = "Korea"
-    ASIA = "Asia"
-    NE = "NE"
-
-
 @dataclass(frozen=True)
 class KafkaConfig:
     consumer_topic: str
@@ -21,6 +13,14 @@ class KafkaConfig:
     group_id: str
     producer_topic: str
     p_key: str
+
+
+class Region(Enum):
+    """거래소 지역 구분"""
+
+    KOREA = "Korea"
+    ASIA = "Asia"
+    NE = "NE"
 
 
 @dataclass(frozen=True)
@@ -41,7 +41,6 @@ class BaseConfigDetails:
         return f"Region.{self.region.value}_{type_suffix}Preprocessing"
 
 
-@dataclass(frozen=True)
 class TickerConfigDetails(BaseConfigDetails):
     """Ticker 전용 설정을 담는 데이터 클래스"""
 
@@ -59,7 +58,6 @@ class TickerConfigDetails(BaseConfigDetails):
         )
 
 
-@dataclass(frozen=True)
 class OrderbookConfigDetails(BaseConfigDetails):
     """Orderbook 전용 설정을 담는 데이터 클래스"""
 
@@ -75,24 +73,6 @@ class OrderbookConfigDetails(BaseConfigDetails):
                 p_key=f"{self.exchange_name.capitalize()}Orderbook",
             )
         )
-
-
-@dataclass(frozen=True)
-class KafkaConfig:
-    consumer_topic: str
-    p_partition: int
-    c_partition: int
-    group_id: str
-    producer_topic: str
-    p_key: str
-
-
-class Region(Enum):
-    """거래소 지역 구분"""
-
-    KOREA = "Korea"
-    ASIA = "Asia"
-    NE = "NE"
 
 
 class ExchangeInfo:
