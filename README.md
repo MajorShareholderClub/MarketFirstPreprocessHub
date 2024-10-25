@@ -36,26 +36,26 @@
 
 ## 소모하는 토픽
 - **Ticker**:
-    - `asiaSocketDataInBTC`
-    - `koraSocketDataInBTC`
-    - `neSocketDataInBTC`
+    - `asiaSocketDataInBTC` (partition=6개)
+    - `koraSocketDataInBTC` (partition=8개)
+    - `neSocketDataInBTC`(partition=4개)
 
 ## 📥 전처리하고 난 후 보내는 토픽
 - **Ticker**:
-    - `Region.Asia_TickerPreprocessing`
-    - `Region.Korea_TickerPreprocessing`
-    - `Region.NE_TickerPreprocessing`
+    - `Region.Asia_TickerPreprocessing` (partition=3개)
+    - `Region.Korea_TickerPreprocessing` (partition=4개)
+    - `Region.NE_TickerPreprocessing`(partition=2개)
   
 - **Orderbook**:
-    - `Region.Asia_OrderbookPreprocessing`
-    - `Region.Korea_OrderbookPreprocessing`
-    - `Region.NE_OrderbookPreprocessing`
+    - `Region.Asia_OrderbookPreprocessing` (partition=3개)
+    - `Region.Korea_OrderbookPreprocessing` (partition=4개)
+    - `Region.NE_OrderbookPreprocessing` (partition=2개)
 
 ## 🚀 Kafka Connector
 - 이 시스템은 Kafka Connector를 통해 데이터를 MinIO로 전송합니다.
 - 전송 조건:
-    - Ticker 데이터: 20개 수집 후 전송
-    - Orderbook 데이터: 50개 수집 후 전송
+    - Ticker 전처리 토픽 데이터: 20개 수집 후 전송
+    - Orderbook 전처리 토픽 데이터: 50개 수집 후 전송
 
 ## 📊 데이터 포맷
 - **Orderbook**:
@@ -94,7 +94,7 @@ ex = {
 	•	데이터 정제: 수집한 데이터를 분석하기 용이한 형태로 변환하고, 불필요한 정보를 제거합니다.
 	•	에러 처리: 데이터 수집 및 처리 과정에서 발생할 수 있는 다양한 오류를 효과적으로 처리하여 시스템의 안정성을 높입니다.
 
-    
+
 ### 🚀 사용 방법
 
 ```pyhon3
