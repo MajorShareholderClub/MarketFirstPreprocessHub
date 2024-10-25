@@ -5,6 +5,7 @@ import json
 import logging
 from src.logger import AsyncLogger
 from typing import Final, TypedDict, Callable, Any
+from aiokafka.consumer.subscription_state import ConsumerRebalanceListener
 
 from decimal import Decimal
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
@@ -17,6 +18,21 @@ from mq.exception import handle_kafka_errors
 def default(obj: Any):
     if isinstance(obj, Decimal):
         return str(obj)
+
+
+class PartitionAssignmentHandler(ConsumerRebalanceListener):
+    """파티션 할당 변경 감지 핸들러"""
+
+    def __init__(self, processor):
+        self.processor = processor
+
+    async def on_partitions_assigned(self, assigned):
+        new_partitions = {tp.partition for tp in assigned}
+        await self.processor.handle_partition_assignment(new_partitions)
+
+    async def on_partitions_revoked(self, revoked):
+        revoked_partitions = {tp.partition for tp in revoked}
+        await self.processor.handle_partition_revocation(revoked_partitions)
 
 
 class KafkaConsumerConfig(TypedDict):
@@ -43,7 +59,6 @@ class AsyncKafkaHandler:
         self.logger = AsyncLogger(
             target="kafka", folder="kafka_handler"
         ).log_message_sync
-
         self.consumer: AIOKafkaConsumer | None = None
         self.producer: AIOKafkaProducer | None = None
 
@@ -61,13 +76,13 @@ class AsyncKafkaHandler:
                 value_deserializer=lambda x: json.loads(x.decode("utf-8")),
             )
             self.consumer = AIOKafkaConsumer(**config)
-            await self.consumer.start()
             await self.logger(
                 logging.INFO, f"소비자가 초기화되었습니다: {self.consumer_topic}"
             )
 
             # partition 이 None일 경우 전체를 구독 예외 로직
             self.consumer.subscribe([self.consumer_topic])  # 전체 토픽 구독
+            await self.consumer.start()
 
             # 그룹 메타데이터 확인
             try:

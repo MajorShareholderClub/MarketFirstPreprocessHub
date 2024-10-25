@@ -6,9 +6,10 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from mq.kafka_config import Region
 from src.config import create_exchange_configs
 from src.logger import AsyncLogger
+from src.common.common_consumer import CommonConsumerSettingProcessor
 
 
-class RegionTickerOrderbookProcessor:
+class RegionTickerOrderbookProcessor(CommonConsumerSettingProcessor):
     """주문서 처리 메인 클래스"""
 
     def __init__(self, kafka_consumer_type: str, is_ticker: bool) -> None:
@@ -18,21 +19,30 @@ class RegionTickerOrderbookProcessor:
         self.logger = AsyncLogger(
             "init", folder=self.kafka_consumer_type
         ).log_message_sync
+        self.process_map = {
+            "orderbook": self.calculate_total_bid_ask,
+            "ticker": self.data_task_a_crack_ticker,
+        }
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-        retry_error_callback=lambda retry_state: logging.getLogger(__name__).error(
-            f"{retry_state.attempt_number}번째 시도 실패"
-        ),
-    )
+    # @retry(
+    #     stop=stop_after_attempt(3),
+    #     wait=wait_exponential(multiplier=1, min=4, max=10),
+    #     retry_error_callback=lambda retry_state: logging.getLogger(__name__).error(
+    #         f"{retry_state.attempt_number}번째 시도 실패"
+    #     ),
+    # )
     async def _create_task(self, config) -> None:
-        processor = config["class_address"](**config["kafka_config"])
-        await processor.initialize()
+        process = config["class_address"](**config["kafka_config"])
+        config[f"bound_{self.kafka_consumer_type}"] = self.process_map.get(
+            self.kafka_consumer_type
+        )
+        await process.initialize()
         try:
-            await processor.batch_process_messages(target=self.kafka_consumer_type)
+            await process.batch_process_messages(
+                target=self.kafka_consumer_type, config=config
+            )
         finally:
-            await processor.cleanup()
+            await process.cleanup()
 
     def _create_region_tasks(self, region: Region) -> list[Awaitable[None]]:
         """지역별 모든 태스크 생성"""
