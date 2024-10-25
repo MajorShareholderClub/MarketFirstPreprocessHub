@@ -1,4 +1,3 @@
-import logging
 from enum import Enum
 from dataclasses import dataclass, asdict
 from typing import TypeVar, Generic
@@ -76,15 +75,6 @@ class OrderbookConfigDetails(BaseConfigDetails):
                 p_key=f"{self.exchange_name.capitalize()}Orderbook",
             )
         )
-
-
-# 로깅 설정
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("orderbook_processor.log"), logging.StreamHandler()],
-)
-logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)

@@ -3,6 +3,7 @@ from __future__ import annotations
 from random import randint
 import json
 import logging
+from src.logger import AsyncLogger
 from typing import Final, TypedDict, Callable, Any
 
 from decimal import Decimal
@@ -11,10 +12,6 @@ from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from mq.exception import handle_kafka_errors
 
 # 로깅 설정
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
 
 
 def default(obj: Any):
@@ -43,6 +40,9 @@ class AsyncKafkaHandler:
         self.bootstrap_servers: Final[str] = bootstrap_servers
         self.consumer_topic: Final[str | None] = consumer_topic
         self.group_id: Final[str] = group_id
+        self.logger = AsyncLogger(
+            target="kafka", folder="kafka_handler"
+        ).log_message_sync
 
         self.consumer: AIOKafkaConsumer | None = None
         self.producer: AIOKafkaProducer | None = None
@@ -62,7 +62,9 @@ class AsyncKafkaHandler:
             )
             self.consumer = AIOKafkaConsumer(**config)
             await self.consumer.start()
-            logger.info(f"소비자가 초기화되었습니다: {self.consumer_topic}")
+            await self.logger(
+                logging.INFO, f"소비자가 초기화되었습니다: {self.consumer_topic}"
+            )
 
             # partition 이 None일 경우 전체를 구독 예외 로직
             self.consumer.subscribe([self.consumer_topic])  # 전체 토픽 구독
@@ -70,9 +72,9 @@ class AsyncKafkaHandler:
             # 그룹 메타데이터 확인
             try:
                 metadata = self.consumer._group_id
-                logger.info(f"Consumer group metadata: {metadata}")
+                await self.logger(logging.INFO, f"Consumer group metadata: {metadata}")
             except Exception as e:
-                logger.error(f"Failed to get group metadata: {e}")
+                await self.logger(logging.ERROR, f"Failed to get group metadata: {e}")
 
         self.producer = AIOKafkaProducer(
             bootstrap_servers=self.bootstrap_servers,
@@ -85,7 +87,7 @@ class AsyncKafkaHandler:
             acks=-1,
         )
         await self.producer.start()
-        logger.info("생산자가 초기화되었습니다")
+        await self.logger(logging.INFO, "생산자가 초기화되었습니다")
 
     @handle_kafka_errors
     async def cleanup(self) -> None:
@@ -94,12 +96,12 @@ class AsyncKafkaHandler:
             case (consumer, producer) if consumer is not None and producer is not None:
                 await consumer.stop()
                 await producer.stop()
-                logger.info("모든 Kafka 연결이 종료되었습니다")
+                await self.logger(logging.INFO, "모든 Kafka 연결이 종료되었습니다")
             case (consumer, _) if consumer is not None:
                 await consumer.stop()
-                logger.info("소비자 연결이 종료되었습니다")
+                await self.logger(logging.INFO, "소비자 연결이 종료되었습니다")
             case (_, producer) if producer is not None:
                 await producer.stop()
-                logger.info("생산자 연결이 종료되었습니다")
+                await self.logger(logging.INFO, "생산자 연결이 종료되었습니다")
             case _:
-                logger.info("종료할 연결이 없습니다")
+                await self.logger(logging.INFO, "종료할 연결이 없습니다")
