@@ -24,27 +24,3 @@ class UpBithumbAsyncOrderbookProcessor(BaseAsyncOrderbookPrepcessor):
         bid_data = [(entry["bid_price"], entry["bid_size"]) for entry in unit_data]
         ask_data = [(entry["ask_price"], entry["ask_size"]) for entry in unit_data]
         return self.orderbook_common_processing(bid_data=bid_data, ask_data=ask_data)
-
-
-async def onekorbit_orderbook_cp(
-    consumer_topic: str,
-    c_partition: int,
-    group_id: str,
-    producer_topic: str,
-    p_partition: int,
-    p_key: str,
-) -> None:
-    """시작점"""
-    processor = CoinoneKorbitAsyncOrderbookProcessor(
-        consumer_topic=consumer_topic,
-        c_partition=c_partition,
-        group_id=group_id,
-        producer_topic=producer_topic,
-        p_partition=p_partition,
-        p_key=p_key,
-    )
-    await processor.initialize()
-    try:
-        await processor.batch_process_messages(target="orderbook")
-    finally:
-        await processor.cleanup()
