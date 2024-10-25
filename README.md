@@ -40,7 +40,7 @@
     - `koraSocketDataInBTC`
     - `neSocketDataInBTC`
 
-## 📥 전처리하는 토픽
+## 📥 전처리하고 난 후 보내는 토픽
 - **Ticker**:
     - `Region.Asia_TickerPreprocessing`
     - `Region.Korea_TickerPreprocessing`
