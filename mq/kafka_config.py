@@ -48,7 +48,7 @@ class TickerConfigDetails(BaseConfigDetails):
         """Kafka 설정 정보를 반환"""
         return asdict(
             KafkaConfig(
-                consumer_topic=f"{self.region.name.lower()}SocketDataInBTC",
+                consumer_topic=f"{self.region.name.lower()}SocketDataInBTC-ticker",
                 p_partition=self.p_partition,
                 c_partition=self.c_partition,
                 producer_topic=self.product_topic_name("Ticker"),
@@ -65,7 +65,7 @@ class OrderbookConfigDetails(BaseConfigDetails):
         """Kafka 설정 정보를 반환"""
         return asdict(
             KafkaConfig(
-                consumer_topic=f"{self.region.name.lower()}SocketDataInBTC",
+                consumer_topic=f"{self.region.name.lower()}SocketDataInBTC-orderbook",
                 p_partition=self.p_partition,
                 c_partition=self.c_partition,
                 producer_topic=self.product_topic_name("Orderbook"),
@@ -102,7 +102,7 @@ class ExchangeInfo:
         return config_class(
             region=region,
             exchange_name=name,
-            c_partition=base_partition * 2 + c_partition_offset,
+            c_partition=c_partition_offset + base_partition,
             p_partition=base_partition,
         )
 
@@ -139,4 +139,4 @@ class OrderbookConfigExchange(ConfigExchangeBase[OrderbookConfigDetails]):
     """Orderbook 전용 거래소 설정"""
 
     config_class = OrderbookConfigDetails
-    c_partition_offset = 1
+    c_partition_offset = 0

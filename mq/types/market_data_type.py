@@ -16,6 +16,8 @@ class OrderEntry(TypedDict):
 
 
 class ProcessedOrderBook(TypedDict):
+    market: str
+    symbol: str
     highest_bid: float | None  # 최고 매수 가격
     lowest_ask: float | None  # 최저 매도 가격
     spread: float | None  # 스프레드 (차이)

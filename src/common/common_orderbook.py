@@ -1,6 +1,7 @@
 from abc import abstractmethod
 
 import json
+from typing import Any
 from datetime import datetime, timezone
 from src.common.common_consumer import CommonConsumerSettingProcessor
 
@@ -28,8 +29,11 @@ class BaseAsyncOrderbookPrepcessor(CommonConsumerSettingProcessor):
 
         return total, max(prices) if prices else None
 
-    def orderbook_common_processing(self, bid_data, ask_data) -> ProcessedOrderBook:
+    def orderbook_common_processing(
+        self, bid_data: Any, ask_data: Any, symbol: str, market: str
+    ) -> ProcessedOrderBook:
         """오더북 공통 처리"""
+        # bid_data, ask_data = tuple[float, float]
         bid_total, highest_bid = self.process_order_data(bid_data)
         ask_total, _ = self.process_order_data(ask_data)
 
@@ -41,6 +45,8 @@ class BaseAsyncOrderbookPrepcessor(CommonConsumerSettingProcessor):
         )
 
         return ProcessedOrderBook(
+            market=market,
+            symbol=symbol,
             highest_bid=highest_bid,
             lowest_ask=lowest_ask,
             spread=spread,
@@ -50,7 +56,7 @@ class BaseAsyncOrderbookPrepcessor(CommonConsumerSettingProcessor):
         )
 
     @abstractmethod
-    def order_preprocessing(item: OrderEntry) -> ProcessedOrderBook: ...
+    def order_preprocessing(item: OrderEntry, symbol: str) -> ProcessedOrderBook: ...
 
     @handle_processing_errors
     def calculate_total_bid_ask(self, orderbook: OrderBookData) -> ProcessedOrderBook:
@@ -62,9 +68,13 @@ class BaseAsyncOrderbookPrepcessor(CommonConsumerSettingProcessor):
         Returns:
             ProcessedOrderBook: 처리된 주문서 데이터
         """
+        market: str = orderbook["market"]
+        symbol: str = orderbook["symbol"]
         for record_str in orderbook["data"]:
             if isinstance(record_str, dict):
-                return self.order_preprocessing(item=record_str)
+                return self.order_preprocessing(
+                    item=record_str, symbol=symbol, market=market
+                )
 
             record: OrderEntry = json.loads(record_str)
-            return self.order_preprocessing(item=record)
+            return self.order_preprocessing(item=record, symbol=symbol, market=market)
