@@ -3,87 +3,20 @@ import logging
 from typing import Awaitable
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from mq.kafka_config import KafkaConfig, KafkaConfigExchange, Region
-from src.ticker.ne_ticker import BinanceAsyncTickerProcessor, KrakenAsyncTickerProcessor
-from src.ticker.korea_ticker import (
-    UpbithumbAsyncTickerProcessor,
-    CoinoneAsyncTickerProcessor,
-    KorbitAsyncTickerProcessor,
-)
-from src.ticker.asia_ticker import (
-    BybitAsyncTickerProcessor,
-    GateIoAsyncTickerProcessor,
-    OKXAsyncTickerProcessor,
-)
-
-
-TickerClass = (
-    UpbithumbAsyncTickerProcessor
-    | CoinoneAsyncTickerProcessor
-    | KorbitAsyncTickerProcessor
-    | BybitAsyncTickerProcessor
-    | GateIoAsyncTickerProcessor
-    | OKXAsyncTickerProcessor
-    | BinanceAsyncTickerProcessor
-    | KrakenAsyncTickerProcessor
-)
+from mq.kafka_config import Region
+from src.config import create_exchange_configs
 
 # 로깅 설정
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("orderbook_processor.log"), logging.StreamHandler()],
+    handlers=[logging.FileHandler("ticker_processor.log"), logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
 
 
 class RegionTickerProcessor:
     """주문서 처리 메인 클래스"""
-
-    EXCHANGE_CONFIGS: dict[Region, dict[str, dict[str, KafkaConfig | TickerClass]]] = {
-        Region.KOREA: {
-            "upbit": {
-                "kafka_config": KafkaConfigExchange.UPBIT.kafka_metadata_config(),
-                "class_address": UpbithumbAsyncTickerProcessor,
-            },
-            "bithumb": {
-                "kafka_config": KafkaConfigExchange.BITHUMB.kafka_metadata_config(),
-                "class_address": UpbithumbAsyncTickerProcessor,
-            },
-            "korbit": {
-                "kafka_config": KafkaConfigExchange.KORBIT.kafka_metadata_config(),
-                "class_address": KorbitAsyncTickerProcessor,
-            },
-            "coinone": {
-                "kafka_config": KafkaConfigExchange.COINONE.kafka_metadata_config(),
-                "class_address": CoinoneAsyncTickerProcessor,
-            },
-        },
-        Region.ASIA: {
-            "okx": {
-                "kafka_config": KafkaConfigExchange.OKX.kafka_metadata_config(),
-                "class_address": OKXAsyncTickerProcessor,
-            },
-            "gateio": {
-                "kafka_config": KafkaConfigExchange.GATEIO.kafka_metadata_config(),
-                "class_address": GateIoAsyncTickerProcessor,
-            },
-            "bybit": {
-                "kafka_config": KafkaConfigExchange.BYBIT.kafka_metadata_config(),
-                "class_address": BybitAsyncTickerProcessor,
-            },
-        },
-        Region.NE: {
-            "binance": {
-                "kafka_config": KafkaConfigExchange.BINANCE.kafka_metadata_config(),
-                "class_address": BinanceAsyncTickerProcessor,
-            },
-            "kraken": {
-                "kafka_config": KafkaConfigExchange.KRAKEN.kafka_metadata_config(),
-                "class_address": KrakenAsyncTickerProcessor,
-            },
-        },
-    }
 
     @retry(
         stop=stop_after_attempt(3),
@@ -92,7 +25,7 @@ class RegionTickerProcessor:
             f"{retry_state.attempt_number}번째 시도 실패"
         ),
     )
-    async def _create_task(self, config: dict[str, KafkaConfig, TickerClass]) -> None:
+    async def _create_task(self, config) -> None:
         processor = config["class_address"](**config["kafka_config"])
         await processor.initialize()
         try:
@@ -104,7 +37,8 @@ class RegionTickerProcessor:
         """지역별 모든 태스크 생성"""
         tasks = []
         group_id = None
-        for exchange_config in self.EXCHANGE_CONFIGS[region].values():
+        ticker_config = create_exchange_configs(is_ticker=True)
+        for exchange_config in ticker_config[region].values():
             task = self._create_task(exchange_config)
             tasks.append(task)
 

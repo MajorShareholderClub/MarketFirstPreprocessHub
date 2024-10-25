@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, timezone
-from src.ticker.common_ticker import BaseAsyncTickerProcessor
+from src.common.common_ticker import BaseAsyncTickerProcessor
 
 
 class BinanceAsyncTickerProcessor(BaseAsyncTickerProcessor):

@@ -1,6 +1,6 @@
 import json
 from src.data_format import MarketData, CoinMarketCollection
-from src.common_consumer import CommonConsumerSettingProcessor
+from src.common.common_consumer import CommonConsumerSettingProcessor
 
 from setting.yml_load import TickerProcessorConfig
 from mq.exception import handle_processing_errors
