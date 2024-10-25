@@ -24,10 +24,10 @@ class KafkaS3ConnectorConfig:
     region: Region
     data_type: DataType
     bucket_name: str
-    tasks: str = "8"  # 최대 파티션 수
+    flush_size: str
+    tasks: str = "4"  # 최대 파티션 수
     bootstrap_servers: str = "kafka1:19092,kafka2:29092,kafka3:39092"
     kafka_connect_url: str = "http://localhost:8083"
-    flush_size: str = "50"
 
 
 class KafkaS3Connector:
@@ -53,6 +53,7 @@ class KafkaS3Connector:
                 "topics": topic,
                 "s3.bucket.name": self.config.bucket_name,
                 "flush.size": self.config.flush_size,
+                # "topics.dir": f"{self.config.typed}/{self.config.name}",
                 "file.delim": "-",
                 "storage.class": "io.confluent.connect.s3.storage.S3Storage",
                 "format.class": "io.confluent.connect.s3.format.json.JsonFormat",
@@ -61,9 +62,11 @@ class KafkaS3Connector:
                 "value.converter": "org.apache.kafka.connect.json.JsonConverter",
                 "key.converter.schemas.enable": False,
                 "value.converter.schemas.enable": False,
-                "partitioner.class": "io.confluent.connect.storage.partitioner.DefaultPartitioner",
+                "s3.compression.type": "gzip",
+                "partitioner.class": "io.confluent.connect.storage.partitioner.DailyPartitioner",
+                "auto.offset.reset": "earliest",
                 "directory.delim": "/",
-                "path.format": "'exchange'=${partition}/year=YYYY/month=MM/day=dd",
+                "path.format": "'year'=YYYY/'month'=MM/'day'=dd/'topics'/${topic}",
                 "locale": "ko-KR",
                 "timezone": "Asia/Seoul",
                 "bootstrap.servers": self.config.bootstrap_servers,
@@ -95,18 +98,21 @@ def create_all_connectors() -> None:
     """모든 커넥터를 생성하는 함수"""
     regions = [Region.KOREA, Region.ASIA, Region.NE]
     data_types = {
-        DataType.TICKER: "ticker-data",
-        DataType.ORDERBOOK: "orderbook-data",
+        DataType.TICKER: {"bucket": "ticker-data", "flush_size": "20"},
+        DataType.ORDERBOOK: {"bucket": "orderbook-data", "flush_size": "50"},
     }
 
-    # 각 지역에 대해 데이터 타입과 해당 버킷 이름 출력
+    # 각 지역에 대해 데이터 타입, 해당 버킷 이름, flush_size 출력
     for region in regions:
-        for data_type, bucket in data_types.items():
+        for data_type, settings in data_types.items():
+            bucket = settings["bucket"]
+            flush_size = settings["flush_size"]
             config = KafkaS3ConnectorConfig(
                 name=f"{region}-World-market",
                 region=region,
                 data_type=data_type,
                 bucket_name=bucket,
+                flush_size=flush_size,
             )
             connector = KafkaS3Connector(config)
             try:

@@ -1,5 +1,5 @@
 import json
-from src.ticker.common_ticker import BaseAsyncTickerProcessor
+from src.common.common_ticker import BaseAsyncTickerProcessor
 
 
 class GateIoAsyncTickerProcessor(BaseAsyncTickerProcessor):
