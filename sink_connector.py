@@ -1,16 +1,9 @@
 from enum import Enum
 from dataclasses import dataclass
-from typing import Dict, Any
+from typing import Any
+from mq.kafka_config import Region
 import json
 import requests
-
-
-class Region(Enum):
-    """거래소 지역 구분"""
-
-    KOREA = "Korea"
-    ASIA = "Asia"
-    NE = "NE"
 
 
 class DataType(Enum):
@@ -42,7 +35,7 @@ class KafkaS3Connector:
         """리전에 따른 토픽 이름 생성"""
         return f"Region.{self.config.region.value}_{self.config.data_type.value}Preprocessing"
 
-    def _build_connector_config(self) -> Dict[str, Any]:
+    def _build_connector_config(self) -> dict[str, Any]:
         """Connector 설정 생성"""
         topic = self._get_topic_name()
         return {
@@ -73,7 +66,7 @@ class KafkaS3Connector:
             },
         }
 
-    def create_connector(self) -> Dict[str, Any]:
+    def create_connector(self) -> dict[str, Any]:
         """Connector 생성"""
         try:
             connector_config = self._build_connector_config()
