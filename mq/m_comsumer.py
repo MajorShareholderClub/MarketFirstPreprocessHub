@@ -31,14 +31,12 @@ class AsyncKafkaHandler:
 
     def __init__(
         self,
-        group_id: str,
-        c_partition: int | None,
-        bootstrap_servers: str = "kafka1:19092,kafka2:29092,kafka3:39092",
         consumer_topic: str | None = None,
+        group_id: str | None = None,
+        bootstrap_servers: str = "kafka1:19092,kafka2:29092,kafka3:39092",
     ) -> None:
         self.bootstrap_servers: Final[str] = bootstrap_servers
         self.consumer_topic: Final[str | None] = consumer_topic
-        self.c_partition = c_partition
         self.group_id: Final[str] = group_id
         self.logger = AsyncLogger(
             target="kafka", folder="kafka_handler"
@@ -50,32 +48,25 @@ class AsyncKafkaHandler:
     async def initialize(self) -> None:
         """Kafka 소비자 및 생산자 연결 초기화"""
         group_id_split: list[str] = self.group_id.split("_")
-        if self.consumer_topic:
-            config = KafkaConsumerConfig(
-                bootstrap_servers=self.bootstrap_servers,
-                group_id=self.group_id,
-                client_id=f"{group_id_split[-1]}-client-{group_id_split[0]}-{randint(1, 100)}",
-                auto_offset_reset="earliest",
-                enable_auto_commit=False,
-                value_deserializer=lambda x: json.loads(x.decode("utf-8")),
-            )
-            self.consumer = AIOKafkaConsumer(**config)
-            await self.logger(
-                logging.INFO, f"소비자가 초기화되었습니다: {self.consumer_topic}"
-            )
+        config = KafkaConsumerConfig(
+            bootstrap_servers=self.bootstrap_servers,
+            group_id=self.group_id,
+            client_id=f"{group_id_split[-1]}-client-{group_id_split[0]}-{randint(1, 100)}",
+            auto_offset_reset="earliest",
+            enable_auto_commit=True,
+            value_deserializer=lambda x: json.loads(x.decode("utf-8")),
+        )
+        self.consumer = AIOKafkaConsumer(**config)
+        self.logger(logging.INFO, f"소비자가 초기화되었습니다: {self.consumer_topic}")
+        self.consumer.subscribe(*[self.consumer_topic])  # 전체 토픽 구독
+        await self.consumer.start()
 
-            # partition 이 None일 경우 전체를 구독 예외 로직
-            # listener = PartitionRebalanceListener(self.c_partition)
-            # self.consumer.subscribe([self.consumer_topic], listener=listener)
-            self.consumer.subscribe([self.consumer_topic])  # 전체 토픽 구독
-            await self.consumer.start()
-
-            # 그룹 메타데이터 확인
-            try:
-                metadata = self.consumer._group_id
-                await self.logger(logging.INFO, f"Consumer group metadata: {metadata}")
-            except Exception as e:
-                await self.logger(logging.ERROR, f"Failed to get group metadata: {e}")
+        # 그룹 메타데이터 확인
+        try:
+            metadata = self.consumer._group_id
+            self.logger(logging.INFO, f"Consumer group metadata: {metadata}")
+        except Exception as e:
+            self.logger(logging.ERROR, f"Failed to get group metadata: {e}")
 
         self.producer = AIOKafkaProducer(
             bootstrap_servers=self.bootstrap_servers,
@@ -88,7 +79,7 @@ class AsyncKafkaHandler:
             acks=-1,
         )
         await self.producer.start()
-        await self.logger(logging.INFO, "생산자가 초기화되었습니다")
+        self.logger(logging.INFO, "생산자가 초기화되었습니다")
 
     @handle_kafka_errors
     async def cleanup(self) -> None:
@@ -97,12 +88,12 @@ class AsyncKafkaHandler:
             case (consumer, producer) if consumer is not None and producer is not None:
                 await consumer.stop()
                 await producer.stop()
-                await self.logger(logging.INFO, "모든 Kafka 연결이 종료되었습니다")
+                self.logger(logging.INFO, "모든 Kafka 연결이 종료되었습니다")
             case (consumer, _) if consumer is not None:
                 await consumer.stop()
-                await self.logger(logging.INFO, "소비자 연결이 종료되었습니다")
+                self.logger(logging.INFO, "소비자 연결이 종료되었습니다")
             case (_, producer) if producer is not None:
                 await producer.stop()
-                await self.logger(logging.INFO, "생산자 연결이 종료되었습니다")
+                self.logger(logging.INFO, "생산자 연결이 종료되었습니다")
             case _:
-                await self.logger(logging.INFO, "종료할 연결이 없습니다")
+                self.logger(logging.INFO, "종료할 연결이 없습니다")

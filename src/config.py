@@ -119,11 +119,15 @@ def create_exchange_configs(is_ticker: bool = True) -> dict[Region, dict[str, Ti
     config_class = TickerConfigExchange if is_ticker else OrderbookConfigExchange
     result: dict[Region, dict[str, TickerOrderConfig]] = {}
 
+    topic = set()
     for region in Region:
         region_configs: dict[str, TickerOrderConfig] = {}
 
         for exchange_name in ExchangeInfo.EXCHANGE_CONFIGS:
             config = config_class.get_config(exchange_name)
+            consumer_topic=config.get_consumer_topic()
+            topic.add(consumer_topic)
+            
             if config.region == region:
                 processor = ExchangeProcessors.get_processor(exchange_name)
                 processor_class = processor.ticker if is_ticker else processor.orderbook
@@ -134,6 +138,7 @@ def create_exchange_configs(is_ticker: bool = True) -> dict[Region, dict[str, Ti
                 )
 
         if region_configs:
-            result[region] = region_configs
-
+            result[region.name] = region_configs
+            result["consumer_topic"] = list(topic)
+    
     return result

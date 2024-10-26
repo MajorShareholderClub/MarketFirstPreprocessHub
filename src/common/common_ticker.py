@@ -1,16 +1,14 @@
 import json
 from src.data_format import MarketData, CoinMarketCollection
-from src.common.common_consumer import CommonConsumerSettingProcessor
 
 from setting.yml_load import TickerProcessorConfig
 from mq.exception import handle_processing_errors
 
 
-class BaseAsyncTickerProcessor(CommonConsumerSettingProcessor):
+class BaseAsyncTickerProcessor:
     """비동기 티커 데이터를 처리하는 기본 클래스."""
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, *args) -> None:
         self.time = args[0]
         self.data_collect = args[1]
 
@@ -32,9 +30,7 @@ class BaseAsyncTickerProcessor(CommonConsumerSettingProcessor):
         data: list[MarketData] = [
             list(
                 MarketData.from_api(
-                    api=self.get_data(item),
-                    data=params,
-                    exchange=market,
+                    api=self.get_data(item), data=params, exchange=market
                 )
                 .model_dump()
                 .values()

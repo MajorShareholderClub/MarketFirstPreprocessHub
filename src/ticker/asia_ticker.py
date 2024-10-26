@@ -3,21 +3,18 @@ from src.common.common_ticker import BaseAsyncTickerProcessor
 
 
 class GateIoAsyncTickerProcessor(BaseAsyncTickerProcessor):
-    def __init__(self, **kafka_meta: dict) -> None:
-        data = kafka_meta
-        super().__init__("time_ms", "result", **data)
+    def __init__(self) -> None:
+        super().__init__("time_ms", "result")
 
 
 class BybitAsyncTickerProcessor(BaseAsyncTickerProcessor):
-    def __init__(self, **kafka_meta: dict) -> None:
-        data = kafka_meta
-        super().__init__("ts", "data", **data)
+    def __init__(self) -> None:
+        super().__init__("ts", "data")
 
 
 class OKXAsyncTickerProcessor(BaseAsyncTickerProcessor):
-    def __init__(self, **kafka_meta: dict) -> None:
-        data = kafka_meta
-        super().__init__("ts", "data", **data)
+    def __init__(self) -> None:
+        super().__init__("ts", "data")
 
     def get_timestamp(self, ticker: dict) -> int:
         """OKX는 timestamp 접근 방식이 다르므로 재정의."""

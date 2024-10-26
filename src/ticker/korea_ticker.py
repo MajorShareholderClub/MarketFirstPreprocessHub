@@ -2,9 +2,8 @@ from src.common.common_ticker import BaseAsyncTickerProcessor
 
 
 class UpbithumbAsyncTickerProcessor(BaseAsyncTickerProcessor):
-    def __init__(self, **kafka_meta: dict) -> None:
-        data = kafka_meta
-        super().__init__("timestamp", None, **data)
+    def __init__(self) -> None:
+        super().__init__("timestamp", None)
 
     def get_timestamp(self, ticker: dict) -> int:
         return ticker[self.time]
@@ -14,15 +13,13 @@ class UpbithumbAsyncTickerProcessor(BaseAsyncTickerProcessor):
 
 
 class CoinoneAsyncTickerProcessor(BaseAsyncTickerProcessor):
-    def __init__(self, **kafka_meta: dict) -> None:
-        data = kafka_meta
-        super().__init__("timestamp", "data", **data)
+    def __init__(self) -> None:
+        super().__init__("timestamp", "data")
 
     def get_timestamp(self, ticker: dict) -> int:
         return ticker["data"][self.time]
 
 
 class KorbitAsyncTickerProcessor(BaseAsyncTickerProcessor):
-    def __init__(self, **kafka_meta: dict) -> None:
-        data = kafka_meta
-        super().__init__("timestamp", "data", **data)
+    def __init__(self) -> None:
+        super().__init__("timestamp", "data")

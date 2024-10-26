@@ -3,13 +3,12 @@ from abc import abstractmethod
 import json
 from typing import Any
 from datetime import datetime, timezone
-from src.common.common_consumer import CommonConsumerSettingProcessor
 
 from mq.types import OrderBookData, ProcessedOrderBook, OrderEntry
 from mq.exception import handle_processing_errors
 
 
-class BaseAsyncOrderbookPrepcessor(CommonConsumerSettingProcessor):
+class BaseAsyncOrderbookPrepcessor:
     """비동기 주문서 데이터를 처리하는 클래스."""
 
     def process_order_data(
