@@ -5,34 +5,16 @@ import json
 import logging
 from src.logger import AsyncLogger
 from typing import Final, TypedDict, Callable, Any
-from aiokafka.consumer.subscription_state import ConsumerRebalanceListener
 
 from decimal import Decimal
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
 from mq.exception import handle_kafka_errors
 
-# 로깅 설정
-
 
 def default(obj: Any):
     if isinstance(obj, Decimal):
         return str(obj)
-
-
-class PartitionAssignmentHandler(ConsumerRebalanceListener):
-    """파티션 할당 변경 감지 핸들러"""
-
-    def __init__(self, processor):
-        self.processor = processor
-
-    async def on_partitions_assigned(self, assigned):
-        new_partitions = {tp.partition for tp in assigned}
-        await self.processor.handle_partition_assignment(new_partitions)
-
-    async def on_partitions_revoked(self, revoked):
-        revoked_partitions = {tp.partition for tp in revoked}
-        await self.processor.handle_partition_revocation(revoked_partitions)
 
 
 class KafkaConsumerConfig(TypedDict):

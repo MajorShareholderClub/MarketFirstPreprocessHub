@@ -4,9 +4,12 @@ from typing import Awaitable
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from mq.kafka_config import Region
-from src.config import create_exchange_configs
+from src.config import create_exchange_configs, TickerClass, OrderbookClass
 from src.logger import AsyncLogger
 from src.common.common_consumer import CommonConsumerSettingProcessor
+
+
+ProcessClass = TickerClass | OrderbookClass
 
 
 class RegionTickerOrderbookProcessor(CommonConsumerSettingProcessor):
@@ -24,15 +27,15 @@ class RegionTickerOrderbookProcessor(CommonConsumerSettingProcessor):
             "ticker": self.data_task_a_crack_ticker,
         }
 
-    # @retry(
-    #     stop=stop_after_attempt(3),
-    #     wait=wait_exponential(multiplier=1, min=4, max=10),
-    #     retry_error_callback=lambda retry_state: logging.getLogger(__name__).error(
-    #         f"{retry_state.attempt_number}번째 시도 실패"
-    #     ),
-    # )
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        retry_error_callback=lambda retry_state: logging.getLogger(__name__).error(
+            f"{retry_state.attempt_number}번째 시도 실패"
+        ),
+    )
     async def _create_task(self, config) -> None:
-        process = config["class_address"](**config["kafka_config"])
+        process: ProcessClass = config["class_address"](**config["kafka_config"])
         config[f"bound_{self.kafka_consumer_type}"] = self.process_map.get(
             self.kafka_consumer_type
         )
@@ -51,7 +54,7 @@ class RegionTickerOrderbookProcessor(CommonConsumerSettingProcessor):
         ticker_config = create_exchange_configs(is_ticker=self.is_ticker)
         for exchange_config in ticker_config[region].values():
             task = self._create_task(exchange_config)
-            tasks.append(task)
+            tasks.extend(task)
 
             # 로깅을 위해 그룹 ID 저장
             if group_id is None:
