@@ -7,7 +7,7 @@ from src.logger import AsyncLogger
 from typing import Final, TypedDict, Callable, Any
 
 from decimal import Decimal
-from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer, ConsumerRebalanceListener
 
 from mq.exception import handle_kafka_errors
 
@@ -32,11 +32,13 @@ class AsyncKafkaHandler:
     def __init__(
         self,
         group_id: str,
+        c_partition: int | None,
         bootstrap_servers: str = "kafka1:19092,kafka2:29092,kafka3:39092",
         consumer_topic: str | None = None,
     ) -> None:
         self.bootstrap_servers: Final[str] = bootstrap_servers
         self.consumer_topic: Final[str | None] = consumer_topic
+        self.c_partition = c_partition
         self.group_id: Final[str] = group_id
         self.logger = AsyncLogger(
             target="kafka", folder="kafka_handler"
@@ -54,7 +56,7 @@ class AsyncKafkaHandler:
                 group_id=self.group_id,
                 client_id=f"{group_id_split[-1]}-client-{group_id_split[0]}-{randint(1, 100)}",
                 auto_offset_reset="earliest",
-                enable_auto_commit=True,
+                enable_auto_commit=False,
                 value_deserializer=lambda x: json.loads(x.decode("utf-8")),
             )
             self.consumer = AIOKafkaConsumer(**config)
@@ -63,6 +65,8 @@ class AsyncKafkaHandler:
             )
 
             # partition 이 None일 경우 전체를 구독 예외 로직
+            # listener = PartitionRebalanceListener(self.c_partition)
+            # self.consumer.subscribe([self.consumer_topic], listener=listener)
             self.consumer.subscribe([self.consumer_topic])  # 전체 토픽 구독
             await self.consumer.start()
 

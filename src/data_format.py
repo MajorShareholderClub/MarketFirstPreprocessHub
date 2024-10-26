@@ -1,5 +1,3 @@
-"""데이터 전처리 포맷 설계"""
-
 from __future__ import annotations
 from typing import Any
 from decimal import Decimal, ROUND_HALF_UP
@@ -18,13 +16,20 @@ class PriceData(BaseModel):
     acc_trade_volume_24h: Decimal | None = Field(
         default=None, description="24시간 거래량"
     )
+    signed_change_price: Decimal | None = Field(
+        default=None, description="변화액(당일 종가 - 전일 종가)"
+    )
+    signed_change_rate: Decimal | None = Field(
+        default=None, description="변화율((당일 종가 - 전일 종가) / 전일 종가 * 100)"
+    )
 
     @field_validator("*", mode="before")
     @classmethod
     def round_three_place_adjust(cls, value: float) -> Decimal | None:
         """모든 필드에 대한 값을 소수점 셋째 자리로 반올림"""
         if isinstance(value, (float, int, str, Decimal)):
-            return Decimal(value).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+            return Decimal(str(value)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+        return None
 
 
 class MarketData(BaseModel):
@@ -40,7 +45,9 @@ class MarketData(BaseModel):
                     "high_price": 38828000.0,
                     "low_price": 38470000.0,
                     "prev_closing_price": 38742000.0,
-                    "acc_trade_volume_24h": 2754.0481778
+                    "acc_trade_volume_24h": 2754.0481778,
+                    "signed_change_price": -642000.0,
+                    "signed_change_rate": -1.66
                 }
             }
     """
@@ -49,38 +56,178 @@ class MarketData(BaseModel):
 
     @staticmethod
     def _key_and_get_first_value(dictionary: dict, key: str) -> int | bool:
-        # 딕셔너리 또는 리스트 확인
-        if not isinstance(dictionary, dict):
-            return None
+        """딕셔너리에서 키에 해당하는 첫 번째 값을 안전하게 추출
 
-        # key가 존재하는지 확인
+        Args:
+            dictionary: 검색할 딕셔너리
+            key: 찾을 키
+
+        Returns:
+            int | bool: 찾은 값 또는 -1 (에러/없음)
+        """
+        # 딕셔너리 타입 확인
+        if not isinstance(dictionary, dict):
+            return -1
+
+        # key 존재 여부 및 값 유효성 확인
         if key not in dictionary or dictionary[key] in (None, ""):
             return -1
 
         value: int | list | str = dictionary[key]
-        # match 표현식을 사용하여 값에 따른 처리
+        # match 표현식으로 값 타입에 따른 처리
         match value:
-            # value가 리스트이고 리스트가 비어 있지 않은 경우
             case list() if len(value) > 0:
                 return value[0]
-            case _:  # 그 외의 경우 (리스트가 아니거나 빈 리스트)
+            case _:
                 return value
 
-    @classmethod
-    def _create_price_data(cls, api: dict[str, Any], data: list[str]) -> PriceData:
-        """API 데이터에서 PriceData 객체 생성"""
-        # "None" 값을 -1로 바꾸기 위해, data 리스트의 요소를 안전하게 확인
-        if "None" in data:
-            data[4] = -1
+    @staticmethod
+    def _signed_change_price(
+        api: dict[str, Any], data: list[str], exchange: str = ""
+    ) -> Decimal | int:
+        """변화액 계산 - 거래소별 계산 방식 적용
 
+        Args:
+            api: 거래소 원본 데이터
+            data: yml 파라미터 리스트
+            exchange: 거래소 이름
+
+        Returns:
+            Decimal | int: 변화액. 계산 불가능한 경우 -1 반환
+        """
+        try:
+            # 이미 변화액이 있는 경우 (예: upbit, bithumb)
+            if len(data) >= 7 and MarketData._key_and_get_first_value(
+                api, data[6]
+            ) not in (None, "", -1):
+                return MarketData._key_and_get_first_value(api, data[6])
+
+            # 거래소별 계산 로직
+            trade_price = MarketData._key_and_get_first_value(
+                api, data[1]
+            )  # 현재가(last)
+
+            match exchange.lower():
+                case "coinone":
+                    # last - yesterday_last
+                    prev_price = MarketData._key_and_get_first_value(
+                        api, data[4]
+                    )  # yesterday_last
+                case "korbit":
+                    # last - open
+                    prev_price = MarketData._key_and_get_first_value(
+                        api, data[0]
+                    )  # open
+                case "okx":
+                    # last - open24h
+                    prev_price = MarketData._key_and_get_first_value(
+                        api, data[0]
+                    )  # open24h
+                case "gateio":
+                    # last - last24h (highest_bid를 last24h로 사용)
+                    prev_price = MarketData._key_and_get_first_value(
+                        api, data[4]
+                    )  # highest_bid
+                case "bybit":
+                    # lastPrice - prevPrice24h
+                    prev_price = MarketData._key_and_get_first_value(
+                        api, data[4]
+                    )  # prevPrice24h
+                case _:
+                    # 기본: 현재가 - 전일 종가
+                    prev_price = MarketData._key_and_get_first_value(api, data[4])
+
+            if trade_price in (None, "", -1) or prev_price in (None, "", -1):
+                return -1
+
+            change_price = Decimal(str(trade_price)) - Decimal(str(prev_price))
+            return change_price.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+
+        except (TypeError, ValueError, KeyError):
+            return -1
+
+    @staticmethod
+    def _signed_change_rate(
+        api: dict[str, Any], data: list[str], exchange: str = ""
+    ) -> Decimal | int:
+        """변화율 계산 - 거래소별 계산 방식 적용
+
+        Args:
+            api: 거래소 원본 데이터
+            data: yml 파라미터 리스트
+            exchange: 거래소 이름
+
+        Returns:
+            Decimal | int: 변화율(%). 계산 불가능한 경우 -1 반환
+        """
+        try:
+            # 이미 변화율이 있는 경우 (예: upbit, bithumb, binance)
+            if len(data) >= 8 and MarketData._key_and_get_first_value(
+                api, data[7]
+            ) not in (None, "", -1):
+                return MarketData._key_and_get_first_value(api, data[7])
+
+            trade_price = MarketData._key_and_get_first_value(
+                api, data[1]
+            )  # 현재가(last)
+
+            # 거래소별 계산 로직
+            match exchange.lower():
+                case "coinone":
+                    # ((last - yesterday_last) / yesterday_last) * 100
+                    base_price = MarketData._key_and_get_first_value(
+                        api, data[4]
+                    )  # yesterday_last
+                case "korbit":
+                    # ((last - open) / open) * 100
+                    base_price = MarketData._key_and_get_first_value(
+                        api, data[0]
+                    )  # open
+                case "okx":
+                    # ((last - open24h) / open24h) * 100
+                    base_price = MarketData._key_and_get_first_value(
+                        api, data[0]
+                    )  # open24h
+                case "gateio" | "bybit" | _:
+                    # 기본: ((현재가 - 전일종가) / 전일종가) * 100
+                    base_price = MarketData._key_and_get_first_value(api, data[4])
+
+            if trade_price in (None, "", -1) or base_price in (None, "", -1):
+                return -1
+
+            change_rate = (
+                (Decimal(str(trade_price)) - Decimal(str(base_price)))
+                / Decimal(str(base_price))
+            ) * Decimal("100")
+            return change_rate.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
+
+        except (TypeError, ValueError, KeyError, ZeroDivisionError):
+            return -1
+
+    @classmethod
+    def _create_price_data(
+        cls, api: dict[str, Any], data: list[str], exchange: str = ""
+    ) -> PriceData:
+        """API 데이터에서 PriceData 객체 생성
+
+        Args:
+            api: 거래소 원본 데이터
+            data: yml 파라미터 리스트
+            exchange: 거래소 이름
+
+        Returns:
+            PriceData: 생성된 가격 데이터 객체
+        """
         filtered = MarketData._key_and_get_first_value
         return PriceData(
             opening_price=filtered(api, data[0]),
-            max_price=filtered(api, data[1]),
-            min_price=filtered(api, data[2]),
-            trade_price=filtered(api, data[3]),
-            prev_closing_price=filtered(api, data[4]),  # -1로 기본값 설정
+            trade_price=filtered(api, data[1]),
+            max_price=filtered(api, data[2]),
+            min_price=filtered(api, data[3]),
+            prev_closing_price=filtered(api, data[4]),
             acc_trade_volume_24h=filtered(api, data[5]),
+            signed_change_price=cls._signed_change_price(api, data, exchange),
+            signed_change_rate=cls._signed_change_rate(api, data, exchange),
         )
 
     @classmethod
@@ -88,13 +235,27 @@ class MarketData(BaseModel):
         cls,
         api: ExchangeResponseData,
         data: list[str],
+        exchange: str = "",
     ) -> MarketData:
-        """API 데이터로부터 CoinMarketData 생성"""
-        price_data: PriceData = cls._create_price_data(api=api, data=data)
+        """API 데이터로부터 MarketData 생성
+
+        Args:
+            api: 거래소 응답 데이터
+            data: yml 파라미터 리스트
+            exchange: 거래소 이름
+
+        Returns:
+            MarketData: 생성된 마켓 데이터 객체
+        """
+        price_data: PriceData = cls._create_price_data(
+            api=api, data=data, exchange=exchange
+        )
         return cls(data=price_data)
 
 
 class CoinMarketCollection(BaseModel):
+    """코인 마켓 데이터 컬렉션"""
+
     market: str
     coin_symbol: str
     timestamp: float | int

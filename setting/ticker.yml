@@ -21,6 +21,7 @@ gateio:
     - low_24h
     - highest_bid
     - base_volume
+    - change_percentage
 
 bybit:
   parameter:
@@ -30,6 +31,7 @@ bybit:
     - lowPrice24h
     - prevPrice24h
     - volume24h
+    - price24hPcnt
 
 
 
@@ -41,6 +43,8 @@ upbit:
     - low_price
     - prev_closing_price
     - acc_trade_volume_24h
+    - signed_change_price
+    - signed_change_rate
 
 bithumb:
   parameter:
@@ -50,6 +54,9 @@ bithumb:
     - low_price
     - prev_closing_price
     - acc_trade_volume_24h
+    - signed_change_price
+    - signed_change_rate
+
 
 coinone:
   parameter:
@@ -68,6 +75,7 @@ korbit:
     - low
     - last
     - volume
+    - change
 
 
 binance:
@@ -78,6 +86,8 @@ binance:
     - l
     - x
     - v
+    - p
+    - P
 
 kraken:
   parameter:
@@ -87,4 +97,5 @@ kraken:
     - low
     - last
     - volume
-    
+    - change
+    - change_pct

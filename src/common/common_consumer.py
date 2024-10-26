@@ -1,3 +1,4 @@
+import json
 import asyncio
 import logging
 from abc import abstractmethod
@@ -6,8 +7,10 @@ from typing import Final, TypeVar, Callable, Any
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from src.logger import AsyncLogger
+from src.data_format import CoinMarketCollection
+
 from mq.m_comsumer import AsyncKafkaHandler
-from mq.types import OrderBookData, ProcessedOrderBook
+from mq.types import ProcessedOrderBook
 from mq.exception import (
     handle_kafka_errors,
     KafkaProcessingError,
@@ -39,6 +42,7 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
     ) -> None:
         super().__init__(
             consumer_topic=consumer_topic,
+            c_partition=c_partition,
             group_id=group_id,
         )
         self.producer_topic: Final[str] = producer_topic
@@ -47,16 +51,15 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
         self.p_key: Final[str | None] = p_key
         self.batch_config = batch_config or BatchConfig(size=20, timeout=10.0)
         self.logger = AsyncLogger(target="kafka", folder="topic").log_message
+        # self.process_map = {
+        #     "orderbook": self.calculate_total_bid_ask,
+        #     "ticker": self.data_task_a_crack_ticker,
+        # }
 
     @abstractmethod
-    def calculate_total_bid_ask(self, orderbook: OrderBookData) -> ProcessedOrderBook:
-        """오더북 데이터 처리"""
-        pass
-
+    def data_task_a_crack_ticker(self, ticker: dict) -> CoinMarketCollection: ...
     @abstractmethod
-    def data_task_a_crack_ticker(self, ticker: dict) -> dict:
-        """티커 데이터 처리"""
-        pass
+    def calculate_total_bid_ask(self, item: dict) -> ProcessedOrderBook: ...
 
     async def _send_batch_to_kafka(
         self, producer: AIOKafkaProducer, batch: list[Any]
@@ -82,43 +85,53 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
 
     async def processing_message(
         self,
-        config: dict,
-        target: str,
+        process: ProcessFunction,
         consumer: AIOKafkaConsumer,
         producer: AIOKafkaProducer,
     ) -> None:
         """메시지 배치 처리"""
         batch: list[T] = []
         last_process_time = asyncio.get_event_loop().time()
-        async for message in consumer:
-            # Any --> class Address
+        try:
+            async for message in consumer:
+                # Any --> class Address
 
-            batch.append(message.value)
-            current_time = asyncio.get_event_loop().time()
+                batch.append(message.value)
+                current_time = asyncio.get_event_loop().time()
 
-            if (
-                len(batch) >= self.batch_config.size
-                or current_time - last_process_time >= self.batch_config.timeout
-            ):
+                if (
+                    len(batch) >= self.batch_config.size
+                    or current_time - last_process_time >= self.batch_config.timeout
+                ):
 
-                # 데이터 처리
-                processed_batch = [config[f"bound_{target}"](data) for data in batch]
-                await self.logger(
-                    logging.INFO,
-                    f"""
-                    key --> {message.key}                     
-                    partition --> {message.partition}
-                    {consumer._client._client_id} 는 --> {self.c_partition}를 소모합니다 
-                    method --> {config[f"bound_{target}"]}""",
-                )
-                # Kafka로 전송
-                await self._send_batch_to_kafka(producer, processed_batch)
+                    # 데이터 처리
+                    processed_batch = [process(data) for data in batch]
+                    await self.logger(
+                        logging.INFO,
+                        f"""
+                        key --> {message.key}                     
+                        partition --> {message.partition}
+                        {consumer._client._client_id} 는 --> {self.c_partition}를 소모합니다 
+                        method --> {process}""",
+                    )
+                    # Kafka로 전송
+                    await self._send_batch_to_kafka(producer, processed_batch)
 
-                batch.clear()
-                last_process_time = current_time
+                    batch.clear()
+                    last_process_time = current_time
+        except Exception as error:
+            await self.logger(
+                logging.INFO,
+                f"""
+                key --> {message.key}                     
+                partition --> {message.partition}
+                {consumer._client._client_id} 는 --> {self.c_partition}를 소모 실패합니다 
+                method --> {process}
+                """,
+            )
 
     @handle_kafka_errors
-    async def batch_process_messages(self, target: str, config: dict) -> None:
+    async def batch_process_messages(self, process) -> None:
         """배치 처리 시작점"""
         if not self.consumer or not self.producer:
             raise KafkaProcessingError(
@@ -126,9 +139,11 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
                 "Kafka consumer 또는 producer가 초기화되지 않았습니다",
             )
 
+        # process_func = self.process_map.get(target)
+        # if not process_func:
+        #     raise ValueError(f"알 수 없는 target 유형입니다: {target}")
+
+        print(process)
         await self.processing_message(
-            config=config,
-            target=target,
-            consumer=self.consumer,
-            producer=self.producer,
+            process=process, consumer=self.consumer, producer=self.producer
         )

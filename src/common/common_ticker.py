@@ -34,6 +34,7 @@ class BaseAsyncTickerProcessor(CommonConsumerSettingProcessor):
                 MarketData.from_api(
                     api=self.get_data(item),
                     data=params,
+                    exchange=market,
                 )
                 .model_dump()
                 .values()

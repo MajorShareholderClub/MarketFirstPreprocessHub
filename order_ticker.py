@@ -4,15 +4,14 @@ from typing import Awaitable
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from mq.kafka_config import Region
-from src.config import create_exchange_configs, TickerClass, OrderbookClass
 from src.logger import AsyncLogger
-from src.common.common_consumer import CommonConsumerSettingProcessor
+from src.config import create_exchange_configs, TickerClass, OrderbookClass
 
 
 ProcessClass = TickerClass | OrderbookClass
 
 
-class RegionTickerOrderbookProcessor(CommonConsumerSettingProcessor):
+class RegionTickerOrderbookProcessor:
     """주문서 처리 메인 클래스"""
 
     def __init__(self, kafka_consumer_type: str, is_ticker: bool) -> None:
@@ -22,10 +21,6 @@ class RegionTickerOrderbookProcessor(CommonConsumerSettingProcessor):
         self.logger = AsyncLogger(
             "init", folder=self.kafka_consumer_type
         ).log_message_sync
-        self.process_map = {
-            "orderbook": self.calculate_total_bid_ask,
-            "ticker": self.data_task_a_crack_ticker,
-        }
 
     @retry(
         stop=stop_after_attempt(3),
@@ -36,14 +31,15 @@ class RegionTickerOrderbookProcessor(CommonConsumerSettingProcessor):
     )
     async def _create_task(self, config) -> None:
         process: ProcessClass = config["class_address"](**config["kafka_config"])
-        config[f"bound_{self.kafka_consumer_type}"] = self.process_map.get(
-            self.kafka_consumer_type
-        )
+
+        process_mapping = {
+            "ticker": process.data_task_a_crack_ticker,
+            "orderbook": process.calculate_total_bid_ask,
+        }
+        process_function = process_mapping.get(self.kafka_consumer_type)
         await process.initialize()
         try:
-            await process.batch_process_messages(
-                target=self.kafka_consumer_type, config=config
-            )
+            await process.batch_process_messages(process=process_function)
         finally:
             await process.cleanup()
 
@@ -54,7 +50,7 @@ class RegionTickerOrderbookProcessor(CommonConsumerSettingProcessor):
         ticker_config = create_exchange_configs(is_ticker=self.is_ticker)
         for exchange_config in ticker_config[region].values():
             task = self._create_task(exchange_config)
-            tasks.extend(task)
+            tasks.append(task)
 
             # 로깅을 위해 그룹 ID 저장
             if group_id is None:

@@ -60,25 +60,6 @@ class TickerOrderConfig(TypedDict):
     class_address: Required[Union[type[TickerClass], type[OrderbookClass]]]
 
 
-class Korea(TypedDict):
-    upbit: Required[TickerOrderConfig]
-    bitumb: Required[TickerOrderConfig]
-    koribt: Required[TickerOrderConfig]
-    coinone: Required[TickerOrderConfig]
-
-
-class Asia(TypedDict):
-    okx: Required[TickerOrderConfig]
-    gateio: Required[TickerOrderConfig]
-    bybit: Required[TickerOrderConfig]
-    coinone: Required[TickerOrderConfig]
-
-
-class NE(TypedDict):
-    binance: Required[TickerOrderConfig]
-    kraken: Required[TickerOrderConfig]
-
-
 @dataclass
 class ProcessorMapping:
     """프로세서 클래스 매핑"""

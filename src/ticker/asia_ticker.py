@@ -14,7 +14,6 @@ class BybitAsyncTickerProcessor(BaseAsyncTickerProcessor):
         super().__init__("ts", "data", **data)
 
 
-# OKXAsyncTickerProcessor: OKX에 맞는 데이터 접근 방식을 정의
 class OKXAsyncTickerProcessor(BaseAsyncTickerProcessor):
     def __init__(self, **kafka_meta: dict) -> None:
         data = kafka_meta
