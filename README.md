@@ -1,6 +1,59 @@
 # MarketFirstPreprocessHub
 
-`MarketFirstPreprocessHub`는 카프카 토픽에서 수집한 데이터를 1차 전처리하는 클래스입니다. 이 클래스는 두 가지 주요 카테고리로 나뉘며, 각각 **Ticker**와 **Orderbook**으로 구성되어 있습니다.
+`MarketFirstPreprocessHub`는 카프카 토픽에서 수집한 데이터를 1차 전처리하는 클래스입니다. 이 클래스는 
+두 가지 주요 카테고리로 나뉘며, 각각 **Ticker**와 **Orderbook**으로 구성되어 있습니다.
+
+## 📊 클래스 구조
+```mermaid
+classDiagram
+    class RegionTickerOrderbookProcessor {
+        +process_ticker()
+    }
+    
+    class AsyncKafkaHandler {
+        +initialize()
+        +cleanup()
+    }
+    
+    class CommonConsumerSettingProcessor {
+        +batch_process_messages()
+    }
+    
+    class BaseAsyncTickerProcessor {
+        +data_task_a_crack_ticker()
+    }
+    
+    class BaseAsyncOrderbookPrepcessor {
+        +calculate_total_bid_ask()
+    }
+    
+    class ExchangeProcessors {
+        +PROCESSORS
+        +get_processor()
+    }
+    
+    class KafkaS3Connector {
+        +create_connector()
+    }
+    
+    AsyncKafkaHandler <|-- CommonConsumerSettingProcessor
+    CommonConsumerSettingProcessor <|-- BaseAsyncTickerProcessor
+    CommonConsumerSettingProcessor <|-- BaseAsyncOrderbookPrepcessor
+    
+    RegionTickerOrderbookProcessor --> ExchangeProcessors
+    RegionTickerOrderbookProcessor --> BaseAsyncTickerProcessor
+    RegionTickerOrderbookProcessor --> BaseAsyncOrderbookPrepcessor
+    
+    KafkaS3Connector --> AsyncKafkaHandler
+    
+    note for RegionTickerOrderbookProcessor "메인 프로세서 클래스"
+    note for AsyncKafkaHandler "Kafka 연결 관리"
+    note for CommonConsumerSettingProcessor "공통 소비자 설정"
+    note for BaseAsyncTickerProcessor "티커 데이터 처리"
+    note for BaseAsyncOrderbookPrepcessor "주문서 데이터 처리"
+    note for ExchangeProcessors "거래소별 프로세서 매핑"
+    note for KafkaS3Connector "Kafka to S3 연결"
+```
 
 ## 📈 Ticker
 - **목적**: 다양한 거래소에서 제공하는 가격 정보를 실시간으로 수집하고 가공하여, 효율적으로 데이터 분석 및 거래 결정을 지원합니다.
@@ -161,5 +214,4 @@ python main.py
         ├── 🐍 asia_ticker.py     # 아시아 티커 처리
         ├── 🐍 korea_ticker.py     # 한국 티커 처리
         └── 🐍 ne_ticker.py        # NE 티커 처리
-```
 
