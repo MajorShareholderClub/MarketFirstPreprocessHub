@@ -32,14 +32,9 @@ class RegionTickerOrderbookProcessor:
     async def _create_task(self, config) -> None:
         process: ProcessClass = config["class_address"](**config["kafka_config"])
 
-        process_mapping = {
-            "ticker": process.data_task_a_crack_ticker,
-            "orderbook": process.calculate_total_bid_ask,
-        }
-        process_function = process_mapping.get(self.kafka_consumer_type)
         await process.initialize()
         try:
-            await process.batch_process_messages(process=process_function)
+            await process.batch_process_messages(target=self.kafka_consumer_type)
         finally:
             await process.cleanup()
 

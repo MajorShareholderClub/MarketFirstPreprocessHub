@@ -51,10 +51,10 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
         self.p_key: Final[str | None] = p_key
         self.batch_config = batch_config or BatchConfig(size=20, timeout=10.0)
         self.logger = AsyncLogger(target="kafka", folder="topic").log_message
-        # self.process_map = {
-        #     "orderbook": self.calculate_total_bid_ask,
-        #     "ticker": self.data_task_a_crack_ticker,
-        # }
+        self.process_map = {
+            "orderbook": self.calculate_total_bid_ask,
+            "ticker": self.data_task_a_crack_ticker,
+        }
 
     @abstractmethod
     def data_task_a_crack_ticker(self, ticker: dict) -> CoinMarketCollection: ...
@@ -131,7 +131,7 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
             )
 
     @handle_kafka_errors
-    async def batch_process_messages(self, process) -> None:
+    async def batch_process_messages(self, target: str) -> None:
         """배치 처리 시작점"""
         if not self.consumer or not self.producer:
             raise KafkaProcessingError(
@@ -139,11 +139,10 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
                 "Kafka consumer 또는 producer가 초기화되지 않았습니다",
             )
 
-        # process_func = self.process_map.get(target)
-        # if not process_func:
-        #     raise ValueError(f"알 수 없는 target 유형입니다: {target}")
+        process_func = self.process_map.get(target)
+        if not process_func:
+            raise ValueError(f"알 수 없는 target 유형입니다: {target}")
 
-        print(process)
         await self.processing_message(
-            process=process, consumer=self.consumer, producer=self.producer
+            process=process_func, consumer=self.consumer, producer=self.producer
         )
