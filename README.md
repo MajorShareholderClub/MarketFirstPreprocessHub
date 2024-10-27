@@ -88,7 +88,7 @@ classDiagram
         - 크라켄
 
 ## Group-id
-- 각 partition 별 group id 생성하여 병렬 consumer group 생성
+- 각 partition 별 지정된 파티션으로 수동 조작
 - **ticker**:
     - `Ticker_group_id_Asia`
     - `Ticker_group_id_Korea`
