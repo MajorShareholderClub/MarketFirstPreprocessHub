@@ -24,15 +24,15 @@ async def coin_present_websocket(connection_class) -> None:
                 run_coin_websocket(connection_class, "orderbook", False)
             ),
         )
-        # ticker_task = loop.run_in_executor(
-        #     executor,
-        #     lambda: asyncio.run(run_coin_websocket(connection_class, "ticker", True)),
-        # )
+        ticker_task = loop.run_in_executor(
+            executor,
+            lambda: asyncio.run(run_coin_websocket(connection_class, "ticker", True)),
+        )
 
         # 두 작업이 완료될 때까지 기다림
         await asyncio.gather(
             order_task,
-            # ticker_task,
+            ticker_task,
             return_exceptions=False,
         )
 

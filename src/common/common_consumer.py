@@ -25,7 +25,7 @@ ProcessFunction = Callable[[T], Any]
 
 
 # fmt: off
-@dataclass(frozen=True)
+@dataclass
 class BatchConfig:
     """배치 처리를 위한 환경 설정 값"""
     size: int = field(default_factory=lambda: int(os.getenv('BATCH_SIZE', '20')))
@@ -35,7 +35,7 @@ class BatchConfig:
     retry_delay: float = field(default_factory=lambda: float(os.getenv('RETRY_DELAY', '1.0')))
 
 
-@dataclass(frozen=True)
+@dataclass
 class ProcessingMetrics:
     """메시지 처리 현황 추적을 위한 메트릭스"""
     total_messages: int = 0
@@ -197,17 +197,22 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
     ) -> None:
         """배치 데이터 처리 및 전송"""
         start_time = time.time()
-        processed_batch = [process(data) for data in batch]
-        await self._send_batch_to_kafka(producer, processed_batch)
-        processing_time = time.time() - start_time
-        await self._update_metrics(len(batch), processing_time)
+        try:
+            
+            processed_batch = [process(data) for data in batch]
+            await self._send_batch_to_kafka(producer, processed_batch)
+            processing_time = time.time() - start_time
+            await self._update_metrics(len(batch), processing_time)
+        except Exception as e:
+            await self._handle_processing_error(e, batch[-1], process)
+            raise
 
     async def _handle_processing_error(
-        self, error: Exception, message: Any, process: ProcessFunction
+        self, error: Exception, message: dict, process: ProcessFunction
     ) -> None:
         """에러 발생시 로깅 및 에러 토픽으로 전송"""
         error_message = f"""
-            key --> {message.key}                     
+            key --> {message.keys}                     
             partition --> {message.partition}
             consumer_id --> {self.consumer._client._client_id}
             partition --> {self.c_partition}
@@ -221,12 +226,11 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
         error_data = {
             "error_message": str(error),
             "error_trace": traceback.format_exc(),
-            "failed_message": message.value,
+            "failed_message": error_message,
         }
         await self.producer.send_and_wait(
-            topic=f"{self.producer_topic}_error",
+            topic=f"Processed_error",
             value=error_data,
-            partition=self.p_partition,
             key=self.p_key,
         )
 

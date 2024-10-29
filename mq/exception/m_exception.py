@@ -55,7 +55,7 @@ class ErrorContext:
     exchange: str
     operation: str
     timestamp: float
-    details: Optional[dict] = None
+    details: dict | None = None
 
 
 class BaseProcessingError(Exception):
@@ -106,97 +106,40 @@ def handle_kafka_errors(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitabl
     return wrapper
 
 
-def handle_processing_errors(logger):
-    """통합 에러 처리 데코레이터"""
+def handle_processing_errors(func: Callable[P, R]) -> Callable[P, R]:
+    """에러를 KafkaProcessingError로 변환하는 데코레이터"""
 
-    def decorator(func):
-        @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
-            try:
-                return await func(*args, **kwargs)
-            except json.JSONDecodeError as e:
-                error = KafkaProcessingError(
-                    ErrorType.PROCESSING,
-                    f"JSON 파싱 오류: {str(e)}",
-                    severity=ErrorSeverity.HIGH,
-                    context=ErrorContext(
-                        exchange="unknown",
-                        operation="json_parsing",
-                        timestamp=time.time(),
-                    ),
-                )
-                await logger.error(
-                    f"처리 에러 발생: {str(error)}",
-                    extra={
-                        "severity": error.severity.value,
-                        "exchange": error.context.exchange,
-                        "operation": error.context.operation,
-                        "timestamp": error.context.timestamp,
-                        "details": error.context.details,
-                    },
-                )
-                raise error
-            except ValueError as e:
-                error = KafkaProcessingError(
-                    ErrorType.PROCESSING,
-                    f"값 변환 오류: {str(e)}",
-                    severity=ErrorSeverity.MEDIUM,
-                    context=ErrorContext(
-                        exchange="unknown",
-                        operation="value_conversion",
-                        timestamp=time.time(),
-                    ),
-                )
-                await logger.error(
-                    f"처리 에러 발생: {str(error)}",
-                    extra={
-                        "severity": error.severity.value,
-                        "exchange": error.context.exchange,
-                        "operation": error.context.operation,
-                        "timestamp": error.context.timestamp,
-                        "details": error.context.details,
-                    },
-                )
-                raise error
-            except BaseProcessingError as e:
-                await logger.error(
-                    f"처리 에러 발생: {str(e)}",
-                    extra={
-                        "severity": e.severity.value,
-                        "exchange": e.context.exchange,
-                        "operation": e.context.operation,
-                        "timestamp": e.context.timestamp,
-                        "details": e.context.details,
-                    },
-                )
-                if e.severity in (ErrorSeverity.HIGH, ErrorSeverity.CRITICAL):
-                    raise
-            except Exception as e:
-                import traceback
+    @functools.wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            match type(e):
+                case json.JSONDecodeError():
+                    error_msg = f"JSON 파싱 오류: {str(e)}"
+                    severity = ErrorSeverity.HIGH
+                case ValueError():
+                    error_msg = f"값 변환 오류: {str(e)}"
+                    severity = ErrorSeverity.MEDIUM
+                case _:
+                    import traceback
 
-                error = KafkaProcessingError(
-                    ErrorType.PROCESSING,
-                    f"알 수 없는 처리 오류: {str(e)}",
-                    severity=ErrorSeverity.CRITICAL,
-                    context=ErrorContext(
-                        exchange="unknown",
-                        operation="unknown",
-                        timestamp=time.time(),
-                        details={"traceback": traceback.format_exc()},
-                    ),
-                )
-                await logger.error(
-                    f"예상치 못한 에러: {str(error)}",
-                    extra={
-                        "severity": error.severity.value,
-                        "exchange": error.context.exchange,
-                        "operation": error.context.operation,
-                        "timestamp": error.context.timestamp,
-                        "details": error.context.details,
-                    },
-                )
-                raise error
+                    error_msg = (
+                        f"알 수 없는 처리 오류: {str(e)} -- {traceback.format_exc()}"
+                    )
+                    severity = ErrorSeverity.CRITICAL
 
-        return wrapper
+            context = ErrorContext(
+                exchange="unknown",
+                operation="processing",
+                timestamp=time.time(),
+                details={"original_error": str(e)},
+            )
 
-    return decorator
+            raise KafkaProcessingError(
+                message=error_msg,
+                severity=severity,
+                context=context,
+            )
+
+    return wrapper
