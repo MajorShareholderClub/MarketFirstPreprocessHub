@@ -16,9 +16,10 @@ class BaseAsyncTickerProcessor(CommonConsumerSettingProcessor):
 
     @handle_processing_errors
     def data_task_a_crack_ticker(self, ticker: dict) -> CoinMarketCollection:
-        market = ticker["market"]
-        symbol = ticker["symbol"]
-        params = TickerProcessorConfig(market=market).ticker_parameter
+        region: str = ticker["region"]
+        market: str = ticker["market"]
+        symbol: str = ticker["symbol"]
+        params: dict = TickerProcessorConfig(market=market).ticker_parameter
 
         # 첫 번째 데이터의 timestamp를 가져오는 방식
         if isinstance(ticker["data"][0], str):
@@ -43,6 +44,7 @@ class BaseAsyncTickerProcessor(CommonConsumerSettingProcessor):
         ]
 
         return CoinMarketCollection(
+            region=region,
             market=market,
             coin_symbol=symbol,
             timestamp=timestamp,

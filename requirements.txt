@@ -12,3 +12,6 @@ aiohttp
 setuptools
 aiokafka
 tenacity
+bs4
+finance-dataReader
+psutil

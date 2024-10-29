@@ -33,7 +33,7 @@ class KafkaS3Connector:
 
     def _get_topic_name(self) -> str:
         """리전에 따른 토픽 이름 생성"""
-        return f"Region.{self.config.region.value}_{self.config.data_type.value}Preprocessing"
+        return f"Region{self.config.region.value}_{self.config.data_type.value}Preprocessing"
 
     def _build_connector_config(self) -> dict[str, Any]:
         """Connector 설정 생성"""

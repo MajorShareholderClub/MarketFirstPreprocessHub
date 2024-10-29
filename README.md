@@ -23,7 +23,7 @@ classDiagram
         +data_task_a_crack_ticker()
     }
     
-    class BaseAsyncOrderbookPrepcessor {
+    class BaseAsyncOrderbookProcessor {
         +calculate_total_bid_ask()
     }
     
@@ -38,11 +38,11 @@ classDiagram
     
     AsyncKafkaHandler <|-- CommonConsumerSettingProcessor
     CommonConsumerSettingProcessor <|-- BaseAsyncTickerProcessor
-    CommonConsumerSettingProcessor <|-- BaseAsyncOrderbookPrepcessor
+    CommonConsumerSettingProcessor <|-- BaseAsyncOrderbookProcessor
     
     RegionTickerOrderbookProcessor --> ExchangeProcessors
     RegionTickerOrderbookProcessor --> BaseAsyncTickerProcessor
-    RegionTickerOrderbookProcessor --> BaseAsyncOrderbookPrepcessor
+    RegionTickerOrderbookProcessor --> BaseAsyncOrderbookProcessor
     
     KafkaS3Connector --> AsyncKafkaHandler
     
@@ -50,7 +50,7 @@ classDiagram
     note for AsyncKafkaHandler "Kafka 연결 관리"
     note for CommonConsumerSettingProcessor "공통 소비자 설정"
     note for BaseAsyncTickerProcessor "티커 데이터 처리"
-    note for BaseAsyncOrderbookPrepcessor "주문서 데이터 처리"
+    note for BaseAsyncOrderbookProcessor "주문서 데이터 처리"
     note for ExchangeProcessors "거래소별 프로세서 매핑"
     note for KafkaS3Connector "Kafka to S3 연결"
 ```

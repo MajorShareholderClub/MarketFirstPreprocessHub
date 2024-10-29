@@ -38,7 +38,7 @@ class BaseConfigDetails:
 
     def product_topic_name(self, type_suffix: str) -> str:
         """Kafka producer topic name"""
-        return f"Region.{self.region.value}_{type_suffix}Preprocessing"
+        return f"Region{self.region.value}_{type_suffix}Preprocessing"
 
 
 class TickerConfigDetails(BaseConfigDetails):
