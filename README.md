@@ -3,6 +3,10 @@
 `MarketFirstPreprocessHub`는 카프카 토픽에서 수집한 데이터를 1차 전처리하는 클래스입니다. 이 클래스는 
 두 가지 주요 카테고리로 나뉘며, 각각 **Ticker**와 **Orderbook**으로 구성되어 있습니다.
 
+## 시스템 아키텍처 
+<img width="500" alt="image" src="https://github.com/user-attachments/assets/8dd7e71c-23f5-4a31-bce2-b341d874c4bf">
+
+
 ## 📊 클래스 구조
 ```mermaid
 classDiagram
