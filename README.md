@@ -133,6 +133,7 @@ classDiagram
 - **Orderbook**:
 ```json 
 {
+  "region": "Asia",
   "market": "OKX",
   "coin_symbol": "BTC",
   "highest_bid": 66609.22,
@@ -147,6 +148,7 @@ classDiagram
 - **Ticker**:
 ```json
 {
+  "region": "Asia",
   "market": "OKX",
   "coin_symbol": "BTC",
   "timestamp": 1729678813578.0,
@@ -157,7 +159,9 @@ classDiagram
       "max_price": "66568.8",
       "min_price": "67838.0",
       "prev_closing_price": "66568.8",
-      "acc_trade_volume_24h": "7828.8"
+      "acc_trade_volume_24h": "7828.8",
+      "signed_change_price": "0.8",
+      "signed_change_rate": "0.000000"
     }
   ]
 }
