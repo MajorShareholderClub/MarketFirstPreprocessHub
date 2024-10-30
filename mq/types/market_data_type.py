@@ -2,8 +2,11 @@ from typing import TypedDict
 
 
 class OrderBookData(TypedDict):
-    data: list[str]
+    region: str
+    market: str
+    symbol: str
     timestamp: int
+    data: list[str]
 
 
 class OrderEntryData(TypedDict):

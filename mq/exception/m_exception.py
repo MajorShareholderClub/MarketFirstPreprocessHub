@@ -4,7 +4,7 @@ import functools
 import json
 import logging
 from enum import Enum, auto
-from typing import Callable, ParamSpec, TypeVar, Awaitable, Optional
+from typing import Callable, ParamSpec, TypeVar, Awaitable
 from dataclasses import dataclass
 from src.logger import AsyncLogger
 import time
@@ -136,7 +136,7 @@ def handle_processing_errors(func: Callable[P, R]) -> Callable[P, R]:
                 details={"original_error": str(e)},
             )
 
-            raise KafkaProcessingError(
+            raise DataProcessingError(
                 message=error_msg,
                 severity=severity,
                 context=context,

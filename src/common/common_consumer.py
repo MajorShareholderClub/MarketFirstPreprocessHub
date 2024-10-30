@@ -121,9 +121,7 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
                 실패 메시지 수: {self.metrics.failed_messages}""",
             )
 
-    async def _send_batch_to_kafka(
-        self, producer: AIOKafkaProducer, batch: list[Any]
-    ) -> None:
+    async def _send_batch_to_kafka(self, producer: AIOKafkaProducer, batch: list) -> None:
         """카프카로 배치 데이터 전송 (실패시 재시도)"""
         if not batch:
             return

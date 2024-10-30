@@ -1,44 +1,8 @@
-from enum import Enum
-from dataclasses import dataclass, asdict
-from typing import TypeVar, Generic
+from dataclasses import asdict
+from typing import Generic, TypeVar
+from mq.types import KafkaConfig, BaseConfigDetails, Region, ExchangeConfig
 
 T = TypeVar("T", bound="BaseConfigDetails")
-
-
-@dataclass(frozen=True)
-class KafkaConfig:
-    consumer_topic: str
-    p_partition: int
-    c_partition: int
-    group_id: str
-    producer_topic: str
-    p_key: str
-
-
-class Region(Enum):
-    """거래소 지역 구분"""
-
-    KOREA = "Korea"
-    ASIA = "Asia"
-    NE = "NE"
-
-
-@dataclass(frozen=True)
-class BaseConfigDetails:
-    """기본 설정을 담는 데이터 클래스"""
-
-    region: Region
-    exchange_name: str
-    c_partition: int
-    p_partition: int
-
-    def group_id(self, type_suffix: str) -> str:
-        """Kafka consumer group id"""
-        return f"{type_suffix}_group_id_{self.region.value}"
-
-    def product_topic_name(self, type_suffix: str) -> str:
-        """Kafka producer topic name"""
-        return f"Region{self.region.value}_{type_suffix}Preprocessing"
 
 
 class TickerConfigDetails(BaseConfigDetails):
@@ -78,20 +42,20 @@ class OrderbookConfigDetails(BaseConfigDetails):
 class ExchangeInfo:
     """거래소 정보를 관리하는 클래스"""
 
-    EXCHANGE_CONFIGS = {
+    EXCHANGE_CONFIGS = ExchangeConfig(
         # Korean exchanges
-        "UPBIT": (Region.KOREA, "upbit", 0),
-        "BITHUMB": (Region.KOREA, "bithumb", 1),
-        "COINONE": (Region.KOREA, "coinone", 2),
-        "KORBIT": (Region.KOREA, "korbit", 3),
+        UPBIT=(Region.KOREA, "upbit", 0),
+        BITHUMB=(Region.KOREA, "bithumb", 1),
+        COINONE=(Region.KOREA, "coinone", 2),
+        KORBIT=(Region.KOREA, "korbit", 3),
         # Asian exchanges
-        "OKX": (Region.ASIA, "okx", 0),
-        "BYBIT": (Region.ASIA, "bybit", 1),
-        "GATEIO": (Region.ASIA, "gateio", 2),
+        OKX=(Region.ASIA, "okx", 0),
+        BYBIT=(Region.ASIA, "bybit", 1),
+        GATEIO=(Region.ASIA, "gateio", 2),
         # NE exchanges
-        "BINANCE": (Region.NE, "binance", 0),
-        "KRAKEN": (Region.NE, "kraken", 1),
-    }
+        BINANCE=(Region.NE, "binance", 0),
+        KRAKEN=(Region.NE, "kraken", 1),
+    )
 
     @classmethod
     def create_config(
