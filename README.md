@@ -12,23 +12,30 @@
 classDiagram
     class RegionTickerOrderbookProcessor {
         +process_ticker()
+        +_create_task()
     }
     
     class AsyncKafkaHandler {
         +initialize()
-        +cleanup()
+        +close()
     }
     
     class CommonConsumerSettingProcessor {
         +batch_process_messages()
+        +start_processing_with_partition_management()
     }
     
     class BaseAsyncTickerProcessor {
         +data_task_a_crack_ticker()
+        +get_timestamp()
+        +get_data()
     }
     
     class BaseAsyncOrderbookProcessor {
         +calculate_total_bid_ask()
+        +process_order_data()
+        +orderbook_common_processing()
+        +order_preprocessing()
     }
     
     class ExchangeProcessors {
@@ -39,6 +46,11 @@ classDiagram
     class KafkaS3Connector {
         +create_connector()
     }
+
+    class BatchProcessor {
+        +send_batch_to_kafka()
+        +_check_memory_usage()
+    }
     
     AsyncKafkaHandler <|-- CommonConsumerSettingProcessor
     CommonConsumerSettingProcessor <|-- BaseAsyncTickerProcessor
@@ -48,6 +60,7 @@ classDiagram
     RegionTickerOrderbookProcessor --> BaseAsyncTickerProcessor
     RegionTickerOrderbookProcessor --> BaseAsyncOrderbookProcessor
     
+    CommonConsumerSettingProcessor --> BatchProcessor
     KafkaS3Connector --> AsyncKafkaHandler
     
     note for RegionTickerOrderbookProcessor "메인 프로세서 클래스"
@@ -57,6 +70,7 @@ classDiagram
     note for BaseAsyncOrderbookProcessor "주문서 데이터 처리"
     note for ExchangeProcessors "거래소별 프로세서 매핑"
     note for KafkaS3Connector "Kafka to S3 연결"
+    note for BatchProcessor "배치 처리 관리"
 ```
 
 ## 📈 Ticker
@@ -104,13 +118,13 @@ classDiagram
 
 ## 소모하는 토픽
 - **Ticker**:
-    - `asiaSocketDataInBTC-ticker` (partition=3개)
-    - `koraSocketDataInBTC-ticker` (partition=4개)
-    - `neSocketDataInBTC-ticker`(partition=2개)
+    - `asiaSocketDataIn-ticker` (partition=3개)
+    - `koraSocketDataIn-ticker` (partition=4개)
+    - `neSocketDataIn-ticker`(partition=2개)
 - **Orderbook**:
-    - `asiaSocketDataInBTC-Orderbook` (partition=3개)
-    - `koraSocketDataInBTC-Orderbook` (partition=4개)
-    - `neSocketDataInBTC-Orderbook`(partition=2개)
+    - `asiaSocketDataIn-Orderbook` (partition=3개)
+    - `koraSocketDataIn-Orderbook` (partition=4개)
+    - `neSocketDataIn-Orderbook`(partition=2개)
 
 ## 📥 전처리하고 난 후 보내는 토픽
 - **Ticker**:
