@@ -1,7 +1,6 @@
 import os
 import time
 import psutil
-import logging
 from typing import TypeVar, Callable, Any
 from dataclasses import dataclass, field
 from src.common.admin.logging.logger import AsyncLogger
