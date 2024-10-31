@@ -4,7 +4,7 @@
 두 가지 주요 카테고리로 나뉘며, 각각 **Ticker**와 **Orderbook**으로 구성되어 있습니다.
 
 ## 시스템 아키텍처 
-<img width="500" alt="image" src="https://github.com/user-attachments/assets/8dd7e71c-23f5-4a31-bce2-b341d874c4bf">
+<img width="500" alt="image" src="https://github.com/user-attachments/assets/ef121f05-ef8a-4e04-ace2-2001cc37f7cb">
 
 
 ## 📊 클래스 구조
