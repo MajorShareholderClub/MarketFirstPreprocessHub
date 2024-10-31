@@ -27,20 +27,6 @@ class BaseProcessorConfig:
         raise NotImplementedError("이 메서드는 서브클래스에서 구현되어야 합니다.")
 
 
-class OrderbookProcessorConfig(BaseProcessorConfig):
-    """주문서 처리기 설정 관리 클래스"""
-
-    @property
-    def producer_topic(self) -> str:
-        """프로듀서 토픽 설정값 반환"""
-        return self.config.get("producer_topic", "OrderbookPreprocessing")
-
-    @property
-    def group_id(self) -> str:
-        """그룹 ID 설정값 반환"""
-        return self.config.get("group_id", "orderbook")
-
-
 class TickerProcessorConfig(BaseProcessorConfig):
     """티커 처리기 설정 관리 클래스"""
 

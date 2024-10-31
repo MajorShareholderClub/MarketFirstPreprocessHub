@@ -38,7 +38,7 @@ class KafkaS3Connector:
     def _get_topic_name(self) -> str:
         """토픽 이름 생성 - 리전이 있는 경우와 없는 경우 구분"""
         if self.config.region:
-            return f"Region{self.config.region.value}_{self.config.data_type.value}Coin"
+            return f"Region{self.config.region.value}_{self.config.data_type.value}Preprocessing"
         return f"{self.config.data_type.value}Coin"
 
     def _build_connector_config(self) -> dict[str, Any]:
@@ -179,4 +179,4 @@ def create_all_connectors() -> None:
 
 # 사용 예제
 if __name__ == "__main__":
-    create_global_connectors()
+    create_all_connectors()

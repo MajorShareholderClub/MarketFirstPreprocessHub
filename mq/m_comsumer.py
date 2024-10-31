@@ -1,22 +1,23 @@
 from __future__ import annotations
 
-import asyncio
-from random import randint
 import json
 import logging
-from src.logger import AsyncLogger
-from typing import Final, TypedDict, Callable, Any
+from random import randint
 
 from decimal import Decimal
+from typing import Final, TypedDict, Callable, Any, Optional
+
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer, TopicPartition
-from kafka.errors import KafkaError
 
+from src.common.admin.logging.logger import AsyncLogger
 from mq.exception import handle_kafka_errors
+from mq.partition_manager import PartitionManager
 
 
-def default(obj: Any):
+def default(obj: Any) -> str:
     if isinstance(obj, Decimal):
         return str(obj)
+    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 
 class KafkaConsumerConfig(TypedDict):
@@ -39,19 +40,33 @@ class AsyncKafkaHandler:
         c_partition: int | None = None,
     ) -> None:
         self.bootstrap_servers: Final[str] = bootstrap_servers
-        self.consumer_topic: Final[str | None] = consumer_topic
-        self.group_id: Final[str] = group_id
+        self.consumer_topic: Final[str] = consumer_topic
+        self.group_id: Final[str] = group_id if group_id else "default_group"
         self.logger = AsyncLogger(
-            target="kafka", folder="kafka_handler"
-        ).log_message_sync
+            name="kafka", folder="kafka/handler", file="consumer_handler"
+        )
         self.consumer: AIOKafkaConsumer | None = None
         self.producer: AIOKafkaProducer | None = None
-        self.c_partition: Final[int | None] = c_partition
+        self.c_partition: Final[int] = c_partition
         self.assigned_partition: int | None = None
+        self.partition_manager: PartitionManager | None = None
 
     @handle_kafka_errors
     async def initialize(self) -> None:
         """Kafka 소비자 및 생산자 연결 초기화"""
+        await self.logger.debug(
+            f"""
+            컨슈머 초기화:
+            클래스: {self.__class__}
+            토픽: {self.consumer_topic}
+            파티션: {self.c_partition}
+            그룹ID: {self.group_id}
+            """,
+        )
+
+        if not self.consumer_topic:
+            raise ValueError("consumer_topic이 설정되지 않았습니다.")
+
         group_id_split: list[str] = self.group_id.split("_")
         config = KafkaConsumerConfig(
             bootstrap_servers=self.bootstrap_servers,
@@ -61,19 +76,32 @@ class AsyncKafkaHandler:
             enable_auto_commit=False,
             value_deserializer=lambda x: json.loads(x.decode("utf-8")),
         )
+
         self.consumer = AIOKafkaConsumer(**config)
-        await self.logger(logging.INFO, f"소비자가 초기화되었습니다: {self.consumer_topic}")
-        
+        await self.logger.debug(f"소비자가 초기화되었습니다: {self.consumer_topic}")
+
         if self.c_partition is not None:
-            self.consumer.assign([TopicPartition(self.consumer_topic, self.c_partition)])
+            self.consumer.assign(
+                [TopicPartition(self.consumer_topic, self.c_partition)]
+            )
             self.assigned_partition = self.c_partition
-            await self.logger(logging.INFO, f"파티션 {self.c_partition}이 수동으로 할당되었습니다.")
-        else:
-            await self.consumer.subscribe(*[self.consumer_topic])
-            await self.logger(logging.INFO, "전체 토픽을 구독했습니다.")
+            await self.logger.debug(
+                f"파티션 {self.c_partition}이 수동으로 할당되었습니다."
+            )
 
         await self.consumer.start()
+        assigned_partitions = self.consumer.assignment()
+        await self.logger.debug(f"실제 할당된 파티션: {assigned_partitions}")
 
+        # PartitionManager 초기화 및 시작
+        self.partition_manager = PartitionManager(
+            consumer=self.consumer,
+            topic=self.consumer_topic,
+            assigned_partition=self.assigned_partition,
+        )
+        await self.partition_manager.start_monitoring()
+
+        # Producer 초기화
         self.producer = AIOKafkaProducer(
             bootstrap_servers=self.bootstrap_servers,
             key_serializer=lambda x: json.dumps(x).encode("utf-8"),
@@ -85,66 +113,17 @@ class AsyncKafkaHandler:
             acks=-1,
         )
         await self.producer.start()
-        await self.logger(logging.INFO, "생산자가 초기화되었습니다")
+        await self.logger.debug("생산자가 초기화되었습니다")
 
-    async def manual_partition_management(self) -> None:
-        """수동 파티션 관리 및 리밸런싱 대응"""
-        check_interval = 60  # 1분마다 확인
-        max_retries = 5  # 최대 재시도 횟수
-        retry_count = 0
+    async def close(self) -> None:
+        """리소스 정리"""
+        if self.partition_manager:
+            await self.partition_manager.stop_monitoring()
 
-        while True:
-            try:
-                # 파티션 할당 확인
-                assignment = await self.consumer.getmany(timeout_ms=1000)
-                if not assignment:
-                    await self.logger(logging.WARNING, "할당된 파티션이 없습니다. 재할당을 시도합니다.")
-                    if self.c_partition is not None:
-                        self.consumer.assign([TopicPartition(self.consumer_topic, self.c_partition)])
-                        self.assigned_partition = self.c_partition
-                        await self.logger(logging.INFO, f"파티션 {self.c_partition}이 재할당되었습니다.")
-                    else:
-                        await self.consumer.subscribe(*[self.consumer_topic])
-                        await self.logger(logging.INFO, "전체 토픽을 다시 구독했습니다.")
-                
-                retry_count += 1
-                if retry_count >= max_retries:
-                    await self.logger(logging.ERROR, f"최대 재시도 횟수({max_retries})를 초과했습니다.")
-                    break
-                else:
-                    retry_count = 0  # 성공 시 재시도 카운트 초기화
+        if self.consumer:
+            await self.consumer.stop()
 
-                # 메시지 처리
-                for tp, messages in assignment.items():
-                    for message in messages:
-                        # 메시지 처리 로직
-                        await self.process_message(message)
-                
-                # 수동으로 오프셋 커밋
-                await self.consumer.commit()
-            
-            except KafkaError as e:
-                await self.logger(logging.ERROR, f"Kafka 오류 발생: {e}")
-            
-            await asyncio.sleep(check_interval)
+        if self.producer:
+            await self.producer.stop()
 
-    async def process_message(self, message):
-        # 이 메서드는 CommonConsumerSettingProcessor에서 오버라이드됩니다.
-        pass
-
-    @handle_kafka_errors
-    async def cleanup(self) -> None:
-        """Kafka 연결 정리"""
-        match (self.consumer, self.producer):
-            case (consumer, producer) if consumer is not None and producer is not None:
-                await consumer.stop()
-                await producer.stop()
-                await self.logger(logging.INFO, "모든 Kafka 연결이 종료되었습니다")
-            case (consumer, _) if consumer is not None:
-                await consumer.stop()
-                await self.logger(logging.INFO, "소비자 연결이 종료되었습니다")
-            case (_, producer) if producer is not None:
-                await producer.stop()
-                await self.logger(logging.INFO, "생산자 연결이 종료되었습니다")
-            case _:
-                await self.logger(logging.INFO, "종료할 연결이 없습니다")
+        await self.logger.debug("Kafka 연결이 종료되었습니다.")

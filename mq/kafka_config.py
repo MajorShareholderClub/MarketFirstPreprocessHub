@@ -12,7 +12,7 @@ class TickerConfigDetails(BaseConfigDetails):
         """Kafka 설정 정보를 반환"""
         return asdict(
             KafkaConfig(
-                consumer_topic=f"{self.region.name.lower()}SocketDataInBTC-ticker",
+                consumer_topic=f"{self.region.name.lower()}SocketDataIn-ticker",
                 p_partition=self.p_partition,
                 c_partition=self.c_partition,
                 producer_topic=self.product_topic_name("Ticker"),
@@ -29,7 +29,7 @@ class OrderbookConfigDetails(BaseConfigDetails):
         """Kafka 설정 정보를 반환"""
         return asdict(
             KafkaConfig(
-                consumer_topic=f"{self.region.name.lower()}SocketDataInBTC-orderbook",
+                consumer_topic=f"{self.region.name.lower()}SocketDataIn-orderbook",
                 p_partition=self.p_partition,
                 c_partition=self.c_partition,
                 producer_topic=self.product_topic_name("Orderbook"),

@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-import functools
+import time
 import json
-import logging
+import functools
 from enum import Enum, auto
 from typing import Callable, ParamSpec, TypeVar, Awaitable
-from dataclasses import dataclass
-from src.logger import AsyncLogger
-import time
 
-logger = AsyncLogger(target="Error", folder="error").log_message
+from dataclasses import dataclass
+from src.common.admin.logging.logger import AsyncLogger
+
+logger = AsyncLogger(name="Error", folder="error", file="error")
 
 # 타입 정의
 P = ParamSpec("P")
@@ -90,16 +90,15 @@ def handle_kafka_errors(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitabl
         except Exception as e:
             match e:
                 case KafkaProcessingError():
-                    await logger(logging.ERROR, f"Kafka 처리 오류: {e.detail}")
+                    await logger.error(f"Kafka 처리 오류: {e.detail}")
                 case ConnectionError():
-                    await logger(logging.ERROR, f"연결 오류: {str(e)}")
+                    await logger.error(f"연결 오류: {str(e)}")
                 case ValueError():
-                    await logger(logging.ERROR, f"값 오류: {str(e)}")
+                    await logger.error(f"값 오류: {str(e)}")
                 case _:
                     import traceback
 
-                    await logger(
-                        logging.ERROR,
+                    await logger.error(
                         f"예상치 못한 오류: {str(e)} --> {traceback.print_exc()}",
                     )
 
