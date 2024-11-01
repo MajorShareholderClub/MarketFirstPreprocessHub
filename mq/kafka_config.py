@@ -1,6 +1,7 @@
 from dataclasses import asdict
 from typing import Generic, TypeVar
-from mq.types import KafkaConfig, BaseConfigDetails, Region, ExchangeConfig
+from type_model.kafka_model import KafkaConfig
+from type_model.config_model import BaseConfigDetails, Region, ExchangeConfig
 
 T = TypeVar("T", bound="BaseConfigDetails")
 

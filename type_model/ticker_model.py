@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Any
 from decimal import Decimal, ROUND_HALF_UP
 from pydantic import BaseModel, field_validator, Field
-from mq.types import ExchangeResponseData
+from type_model import ExchangeResponseData
 import FinanceDataReader as fdr
 
 # USD/KRW 환율 정보 가져오기
@@ -39,14 +39,14 @@ class PriceData(BaseModel):
             else:
                 value_in_usd = Decimal(str(value))
             return value_in_usd.quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
-        return None
 
 
 class MarketData(BaseModel):
     """Coin price data schema
     Returns:
         >>>  {
-                "market": "upbit-BTC",
+                "region": "korea",
+                "market": "upbit",
                 "timestamp": 1232355.0,
                 "coin_symbol": "BTC",
                 "data": {

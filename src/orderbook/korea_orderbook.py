@@ -1,5 +1,5 @@
 from src.common.common_orderbook import BaseAsyncOrderbookProcessor
-from mq.types import ProcessedOrderBook, OrderEntry
+from type_model.orderbook_model import ProcessedOrderBook, OrderEntry
 
 
 class CoinoneKorbitAsyncOrderbookProcessor(BaseAsyncOrderbookProcessor):

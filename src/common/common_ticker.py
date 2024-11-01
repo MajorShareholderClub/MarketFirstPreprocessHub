@@ -1,5 +1,5 @@
 import json
-from src.data_format import MarketData, CoinMarketCollection
+from type_model.ticker_model import MarketData, CoinMarketCollection
 from src.common.common_consumer import CommonConsumerSettingProcessor
 
 from setting.yml_load import TickerProcessorConfig
@@ -9,10 +9,9 @@ from mq.exception import handle_processing_errors
 class BaseAsyncTickerProcessor(CommonConsumerSettingProcessor):
     """비동기 티커 데이터를 처리하는 기본 클래스."""
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, time: str, **kwargs) -> None:
         super().__init__(**kwargs)
-        self.time = args[0]
-        self.data_collect = args[1]
+        self.time = time
 
     @handle_processing_errors
     def data_task_a_crack_ticker(self, ticker: dict) -> CoinMarketCollection:
@@ -21,40 +20,28 @@ class BaseAsyncTickerProcessor(CommonConsumerSettingProcessor):
         symbol: str = ticker["symbol"]
         params: dict = TickerProcessorConfig(market=market).ticker_parameter
 
-        # 첫 번째 데이터의 timestamp를 가져오는 방식
-        if isinstance(ticker["data"][0], str):
-            first_data = json.loads(ticker["data"][0])
-        else:
-            first_data = ticker["data"][0]
-
-        timestamp = self.get_timestamp(first_data)
-
-        # 모든 데이터 합산
-        data: list[MarketData] = [
-            list(
-                MarketData.from_api(
-                    api=self.get_data(item),
-                    data=params,
-                    exchange=market,
-                )
-                .model_dump()
-                .values()
-            )[0]
+        # 데이터 컬럼 추출
+        collection: list[CoinMarketCollection] = [
+            CoinMarketCollection(
+                region=region,
+                market=market,
+                coin_symbol=symbol,
+                timestamp=self.get_timestamp(json.loads(item)),
+                data=[
+                    MarketData.from_api(
+                        api=json.loads(item),
+                        data=params,
+                        exchange=market,
+                    )
+                    .model_dump()
+                    .values()
+                ][0],
+            ).model_dump()
             for item in ticker["data"]
         ]
 
-        return CoinMarketCollection(
-            region=region,
-            market=market,
-            coin_symbol=symbol,
-            timestamp=timestamp,
-            data=data,
-        ).model_dump()
+        return collection
 
     def get_timestamp(self, ticker: dict) -> int:
         """거래소에 따른 timestamp 처리. 하위 클래스에서 재정의 가능."""
         return ticker[self.time]  # 기본적으로 self.time 키를 사용
-
-    def get_data(self, item: dict) -> dict:
-        """데이터 접근 방식을 처리. 하위 클래스에서 재정의 가능."""
-        return json.loads(item)[self.data_collect]

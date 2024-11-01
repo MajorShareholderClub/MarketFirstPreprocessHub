@@ -27,16 +27,6 @@ class ExchangeConfig(TypedDict):
 
 
 @dataclass(frozen=True)
-class KafkaConfig:
-    consumer_topic: str
-    p_partition: int
-    c_partition: int
-    group_id: str
-    producer_topic: str
-    p_key: str
-
-
-@dataclass(frozen=True)
 class BaseConfigDetails:
     """기본 설정을 담는 데이터 클래스"""
 

@@ -33,7 +33,6 @@ from src.orderbook.asia_orderbook import (
     OKXAsyncOrderbookProcessor,
 )
 
-
 TickerClass = (
     UpbithumbAsyncTickerProcessor
     | CoinoneAsyncTickerProcessor

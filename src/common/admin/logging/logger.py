@@ -1,10 +1,8 @@
-import os
 import sys
 import asyncio
 import logging
 from pathlib import Path
-from datetime import datetime
-from typing import Optional, Any
+from typing import Optional
 from dataclasses import dataclass
 from asyncio import Queue, QueueFull
 from logging.handlers import RotatingFileHandler

@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import json
-import logging
 from random import randint
 
 from decimal import Decimal
-from typing import Final, TypedDict, Callable, Any, Optional
+from typing import Final, Any
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer, TopicPartition
 
 from src.common.admin.logging.logger import AsyncLogger
+from type_model.kafka_model import KafkaConsumerConfig
 from mq.exception import handle_kafka_errors
 from mq.partition_manager import PartitionManager
 
@@ -18,15 +18,6 @@ def default(obj: Any) -> str:
     if isinstance(obj, Decimal):
         return str(obj)
     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
-
-
-class KafkaConsumerConfig(TypedDict):
-    bootstrap_servers: str
-    group_id: str
-    client_id: str
-    auto_offset_reset: str
-    enable_auto_commit: bool
-    value_deserializer: Callable[[Any], Any]
 
 
 class AsyncKafkaHandler:

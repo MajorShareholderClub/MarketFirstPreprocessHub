@@ -1,7 +1,6 @@
 import asyncio
 import logging
 from typing import Awaitable
-from tenacity import retry, stop_after_attempt, wait_exponential
 
 from mq.kafka_config import Region
 from src.common.admin.logging.logger import AsyncLogger
@@ -19,13 +18,6 @@ class RegionTickerOrderbookProcessor:
         self.logger = AsyncLogger(name="init", folder="init", file="task-init")
         self.configs = create_exchange_configs(is_ticker=self.is_ticker)
 
-    # @retry(
-    #     stop=stop_after_attempt(3),
-    #     wait=wait_exponential(multiplier=1, min=4, max=10),
-    #     retry_error_callback=lambda retry_state: logging.getLogger(__name__).error(
-    #         f"{retry_state.attempt_number}번째 시도 실패"
-    #     ),
-    # )
     async def _create_task(self, config) -> None:
         await self.logger.debug(
             f"""

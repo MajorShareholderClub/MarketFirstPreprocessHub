@@ -1,11 +1,10 @@
 from abc import abstractmethod
 
-import logging
 import json
 from datetime import datetime, timezone
 from src.common.common_consumer import CommonConsumerSettingProcessor
 
-from mq.types import OrderBookData, ProcessedOrderBook, OrderEntry
+from type_model.orderbook_model import OrderBookData, ProcessedOrderBook, OrderEntry
 from mq.exception import handle_processing_errors
 from decimal import Decimal
 import FinanceDataReader as fdr

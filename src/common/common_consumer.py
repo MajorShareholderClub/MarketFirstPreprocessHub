@@ -1,40 +1,28 @@
 import traceback
 import asyncio
-import logging
+import os
 from abc import abstractmethod
 from typing import Final, TypeVar
 
-from aiokafka import AIOKafkaProducer
 from aiokafka.errors import KafkaError
 from src.common.admin.logging.logger import AsyncLogger
-from src.data_format import CoinMarketCollection
+from type_model.ticker_model import CoinMarketCollection
+from type_model.orderbook_model import ProcessedOrderBook
+from type_model.kafka_model import KafkaConfigProducer, BatchConfig
 from mq.m_comsumer import AsyncKafkaHandler
-from mq.types import ProcessedOrderBook
 from mq.exception import (
     handle_kafka_errors,
     KafkaProcessingError,
     ErrorType,
 )
-from dataclasses import dataclass
-from src.common.admin.batch_processor import BatchConfig, BatchProcessor
-from src.common.admin.metric_manager import MetricsManager
+from dataclasses import dataclass, field
+from src.common.admin.batch_processor import BatchProcessor
 from src.common.admin.logging.logging_text import consuming_message, consuming_error
 
 T = TypeVar("T")
 
 
-@dataclass
-class KafkaConfigProducer:
-    """카프카 설정 값"""
-
-    producer: AIOKafkaProducer
-    producer_topic: str
-    p_partition: int
-    p_key: str
-    topic: str
-    batch: list[dict]
-
-
+# fmt: off
 class CommonConsumerSettingProcessor(AsyncKafkaHandler):
     """카프카 컨슈머 설정 및 배치 처리를 위한 기본 클래스"""
 
@@ -72,12 +60,7 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
         self.p_key: Final[str | None] = p_key
         self.batch_config = BatchConfig()
 
-        self.metrics_manager = MetricsManager()
-        self.batch_processor = BatchProcessor(
-            config=self.batch_config,
-            metrics=self.metrics_manager,
-        )
-
+        self.batch_processor = BatchProcessor()
         self.process_mapping = {
             "orderbook": self.calculate_total_bid_ask,
             "ticker": self.data_task_a_crack_ticker,
@@ -96,12 +79,6 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
 
             async for message in self.consumer:
                 # log message
-                consuming: str = consuming_message(
-                    message=message,
-                    c_partition=self.c_partition,
-                    process_func=process_func,
-                )
-                await self.logger.debug(consuming)
                 batch.append(message.value)
 
                 # 배치 사이즈가 충분하거나 시간이 초과되었거나 메모리 사용량이 초과되었을 경우 배치 처리
@@ -114,22 +91,28 @@ class CommonConsumerSettingProcessor(AsyncKafkaHandler):
                 )
 
                 if should_process:
-                    await self.batch_processor.process_current_batch(
-                        process=process_func,
-                        kafka_config=KafkaConfigProducer(
-                            producer=self.producer,
-                            producer_topic=self.producer_topic,
-                            p_partition=self.p_partition,
-                            p_key=self.p_key,
-                            topic=self.consumer_topic,
-                            batch=batch,
-                        ),
+                    consuming: str = consuming_message(
+                        message=message,
+                        c_partition=self.c_partition,
+                        process_func=process_func,
                     )
+                    await self.logger.debug(consuming)
+                    async with self.batch_processor as batch_processor:
+                        await batch_processor.process_current_batch(
+                            process=process_func,
+                            kafka_config=KafkaConfigProducer(
+                                producer=self.producer,
+                                producer_topic=self.producer_topic,
+                                p_partition=self.p_partition,
+                                p_key=self.p_key,
+                                topic=self.consumer_topic,
+                                batch=batch,
+                            ),
+                        )
                     batch.clear()
                     last_process_time = current_time
 
-        except (TypeError, ValueError) as error:
-            self.metrics_manager.metrics.failed_messages += len(batch)
+        except (TypeError, ValueError, Exception) as error:
             await self._handle_processing_error(error, process_func)
 
     async def _handle_processing_error(self, error: Exception, process_func) -> None:

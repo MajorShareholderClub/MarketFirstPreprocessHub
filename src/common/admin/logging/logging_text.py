@@ -63,22 +63,6 @@ def consuming_error(
     return error_data
 
 
-def metrics_logging(metrics: Any) -> str:
-    """메트릭스 로깅 Any -> MetricsManager
-    메트릭스 현황:
-            총 처리 메시지: {metrics.total_messages}
-            평균 배치 크기: {metrics.avg_batch_size:.2f}
-            평균 처리 시간: {metrics.avg_processing_time:.2f}초
-            실패 메시지 수: {metrics.failed_messages}
-    """
-    return f"""메트릭스 현황:
-            총 처리 메시지: {metrics.total_messages}
-            평균 배치 크기: {metrics.avg_batch_size:.2f}
-            평균 처리 시간: {metrics.avg_processing_time:.2f}초
-            실패 메시지 수: {metrics.failed_messages}
-        """
-
-
 def task_init_logging(process: Callable) -> str:
     """태스크 초기화 로깅
     프로세스 초기화 상태:
