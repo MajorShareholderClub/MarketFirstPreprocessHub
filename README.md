@@ -13,11 +13,13 @@ classDiagram
     class RegionTickerOrderbookProcessor {
         +process_ticker()
         +_create_task()
+        +_create_region_tasks()
     }
     
     class AsyncKafkaHandler {
         +initialize()
         +close()
+        +processing_message()
     }
     
     class CommonConsumerSettingProcessor {
@@ -43,15 +45,36 @@ classDiagram
         +get_processor()
     }
     
-    class KafkaS3Connector {
-        +create_connector()
+    class BatchProcessor {
+        +process_current_batch()
+        +_check_memory_usage()
+        +_batch_send_kafka()
     }
 
-    class BatchProcessor {
-        +send_batch_to_kafka()
-        +_check_memory_usage()
+    class TimeStacker {
+        +add_item()
+        +should_flush()
+        +flush()
     }
-    
+
+    class PartitionManager {
+        +start_monitoring()
+        +stop_monitoring()
+        +_monitor_partitions()
+    }
+
+    class AsyncLogger {
+        +debug()
+        +info()
+        +warning()
+        +error()
+    }
+
+    class MarketData {
+        +_signed_change_price()
+        +from_api()
+    }
+
     AsyncKafkaHandler <|-- CommonConsumerSettingProcessor
     CommonConsumerSettingProcessor <|-- BaseAsyncTickerProcessor
     CommonConsumerSettingProcessor <|-- BaseAsyncOrderbookProcessor
@@ -61,16 +84,24 @@ classDiagram
     RegionTickerOrderbookProcessor --> BaseAsyncOrderbookProcessor
     
     CommonConsumerSettingProcessor --> BatchProcessor
-    KafkaS3Connector --> AsyncKafkaHandler
+    BatchProcessor --> TimeStacker
+    AsyncKafkaHandler --> PartitionManager
+    AsyncKafkaHandler --> AsyncLogger
+
+    BaseAsyncTickerProcessor --> MarketData
+    BaseAsyncOrderbookProcessor --> MarketData
     
     note for RegionTickerOrderbookProcessor "메인 프로세서 클래스"
-    note for AsyncKafkaHandler "Kafka 연결 관리"
+    note for AsyncKafkaHandler "Kafka 연결 및 메시지 처리"
     note for CommonConsumerSettingProcessor "공통 소비자 설정"
     note for BaseAsyncTickerProcessor "티커 데이터 처리"
     note for BaseAsyncOrderbookProcessor "주문서 데이터 처리"
     note for ExchangeProcessors "거래소별 프로세서 매핑"
-    note for KafkaS3Connector "Kafka to S3 연결"
     note for BatchProcessor "배치 처리 관리"
+    note for TimeStacker "시간 기반 데이터 스태킹"
+    note for PartitionManager "파티션 모니터링"
+    note for AsyncLogger "비동기 로깅"
+    note for MarketData "시장 데이터 모델"
 ```
 
 ## 📈 Ticker
