@@ -1,13 +1,27 @@
 import yaml
+from functools import lru_cache
 
 
 class BaseProcessorConfig:
     """공통 설정 관리 클래스"""
 
-    def __init__(self, config_path: str) -> None:
+    _config_instance = {}
+
+    def __new__(cls, *args, **kwargs) -> "BaseProcessorConfig":
+        config_path = kwargs.get("config_path", args[1] if len(args) > 1 else None)
+        if config_path not in cls._config_instance:
+            instance = super().__new__(cls)
+            cls._config_instance[config_path] = instance
+            return instance
+        return cls._config_instance[config_path]
+
+    def __init__(self, market: str, config_path: str) -> None:
+        if hasattr(self, "config"):
+            return
         self.config_path = config_path
         self._load_config()
 
+    @lru_cache(maxsize=30)
     def _load_config(self) -> None:
         """설정 파일 로드"""
         try:
@@ -32,7 +46,7 @@ class TickerProcessorConfig(BaseProcessorConfig):
 
     def __init__(self, market: str, config_path: str = "setting/ticker.yml") -> None:
         self.market = market
-        super().__init__(config_path)
+        super().__init__(market, config_path)
 
     @property
     def producer_topic(self) -> str:

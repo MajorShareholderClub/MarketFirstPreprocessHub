@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import TypedDict, Required
+from functools import lru_cache
 
 from mq.kafka_config import (
     KafkaConfig,
@@ -117,11 +118,13 @@ class ExchangeProcessors:
     }
 
     @classmethod
+    @lru_cache(maxsize=2)
     def get_processor(cls, exchange_name: str) -> ProcessorMapping:
         return cls.PROCESSORS[exchange_name.upper()]
 
 
 # fmt: off
+@lru_cache(maxsize=2)
 def create_exchange_configs(is_ticker: bool = True) -> dict[Region, dict[str, TickerOrderConfig]]:
     """거래소 설정을 생성하고 반환하는 함수
     
