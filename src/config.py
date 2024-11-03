@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import TypedDict, Required, Union
+from typing import TypedDict, Required
 
 from mq.kafka_config import (
     KafkaConfig,
@@ -8,16 +8,17 @@ from mq.kafka_config import (
     TickerConfigExchange,
     OrderbookConfigExchange,
 )
-from src.ticker.ne_ticker import BinanceAsyncTickerProcessor, KrakenAsyncTickerProcessor
 from src.ticker.korea_ticker import (
     UpbithumbAsyncTickerProcessor,
     CoinoneAsyncTickerProcessor,
     KorbitAsyncTickerProcessor,
 )
-from src.ticker.asia_ticker import (
+from src.ticker.ne_asia_ticker import (
     BybitAsyncTickerProcessor,
     GateIoAsyncTickerProcessor,
     OKXAsyncTickerProcessor,
+    BinanceAsyncTickerProcessor,
+    KrakenAsyncTickerProcessor,
 )
 from src.orderbook.ne_orderbook import (
     BinanceAsyncOrderbookProcessor,
@@ -33,6 +34,7 @@ from src.orderbook.asia_orderbook import (
     OKXAsyncOrderbookProcessor,
 )
 
+# 티커 클래스
 TickerClass = (
     UpbithumbAsyncTickerProcessor
     | CoinoneAsyncTickerProcessor
@@ -43,6 +45,8 @@ TickerClass = (
     | BinanceAsyncTickerProcessor
     | KrakenAsyncTickerProcessor
 )
+
+# 오더북 클래스
 OrderbookClass = (
     UpBithumbAsyncOrderbookProcessor
     | CoinoneKorbitAsyncOrderbookProcessor
@@ -56,7 +60,7 @@ OrderbookClass = (
 
 class TickerOrderConfig(TypedDict):
     kafka_config: Required[KafkaConfig]
-    class_address: Required[Union[type[TickerClass], type[OrderbookClass]]]
+    class_address: Required[type[TickerClass] | type[OrderbookClass]]
 
 
 @dataclass
@@ -90,20 +94,25 @@ class ExchangeProcessors:
         ),
         # Asian exchanges
         "OKX": ProcessorMapping(
-            ticker=OKXAsyncTickerProcessor, orderbook=OKXAsyncOrderbookProcessor
+            ticker=OKXAsyncTickerProcessor,
+            orderbook=OKXAsyncOrderbookProcessor,
         ),
         "GATEIO": ProcessorMapping(
-            ticker=GateIoAsyncTickerProcessor, orderbook=GateIOAsyncOrderbookProcessor
+            ticker=GateIoAsyncTickerProcessor,
+            orderbook=GateIOAsyncOrderbookProcessor,
         ),
         "BYBIT": ProcessorMapping(
-            ticker=BybitAsyncTickerProcessor, orderbook=BybitAsyncOrderbookProcessor
+            ticker=BybitAsyncTickerProcessor,
+            orderbook=BybitAsyncOrderbookProcessor,
         ),
         # NE exchanges
         "BINANCE": ProcessorMapping(
-            ticker=BinanceAsyncTickerProcessor, orderbook=BinanceAsyncOrderbookProcessor
+            ticker=BinanceAsyncTickerProcessor,
+            orderbook=BinanceAsyncOrderbookProcessor,
         ),
         "KRAKEN": ProcessorMapping(
-            ticker=KrakenAsyncTickerProcessor, orderbook=KrakenAsyncOrderbookProcessor
+            ticker=KrakenAsyncTickerProcessor,
+            orderbook=KrakenAsyncOrderbookProcessor,
         ),
     }
 
@@ -114,10 +123,26 @@ class ExchangeProcessors:
 
 # fmt: off
 def create_exchange_configs(is_ticker: bool = True) -> dict[Region, dict[str, TickerOrderConfig]]:
-    """거래소 설정 생성"""
+    """거래소 설정을 생성하고 반환하는 함수
+    
+    Args:
+        is_ticker (bool): 티커 설정 여부. True면 티커, False면 오더북 설정 생성
+        
+    Returns:
+        dict[Region, dict[str, TickerOrderConfig]]: 지역별 거래소 설정 정보
+    >>> {
+            Region: {
+                exchange_name: {
+                    kafka_config: 카프카 설정 정보
+                    class_address: 프로세서 클래스 주소
+                }
+            }
+        }
+    """
     config_class = TickerConfigExchange if is_ticker else OrderbookConfigExchange
     result: dict[Region, dict[str, TickerOrderConfig]] = {}
 
+    # 지역별 거래소 설정 생성
     for region in Region:
         region_configs: dict[str, TickerOrderConfig] = {}
 

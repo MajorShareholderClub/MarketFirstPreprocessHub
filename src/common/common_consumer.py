@@ -1,6 +1,5 @@
 import traceback
 import asyncio
-import os
 from abc import abstractmethod
 from typing import Final, TypeVar
 
@@ -15,7 +14,6 @@ from mq.exception import (
     KafkaProcessingError,
     ErrorType,
 )
-from dataclasses import dataclass, field
 from src.common.admin.batch_processor import BatchProcessor
 from src.common.admin.logging.logging_text import consuming_message, consuming_error
 

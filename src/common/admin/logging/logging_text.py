@@ -1,28 +1,28 @@
 from typing import Callable
 import traceback
-from typing import Any
 from aiokafka import AIOKafkaConsumer
 
 
-def consuming_message(message: dict, c_partition: int, process_func: Callable) -> str:
+def consuming_message(message: dict, c_partition: int, process_func: Callable) -> dict:
     """컨슈머 메시지 로깅
-    요청한 파티션: {c_partition}
-    메시지 파티션: {message.partition}
-    토픽: {message.topic}
-    오프셋: {message.offset}
-    타임스탬프: {message.timestamp}
-    키: {message.key}
-    처리해야할 메서드 : {process_func.__name__}
+
+    Args:
+        message (dict): 컨슈머로부터 받은 메시지
+        c_partition (int): 요청한 파티션 번호
+        process_func (Callable): 처리해야 할 함수
+
+    Returns:
+        dict: 로깅 정보를 담은 딕셔너리
     """
-    return f"""
-        요청한 파티션: {c_partition}
-        메시지 파티션: {message.partition}
-        토픽: {message.topic}
-        오프셋: {message.offset}
-        타임스탬프: {message.timestamp}
-        키: {message.key}
-        처리해야할 메서드 : {process_func.__name__}
-    """
+    return {
+        "requested_partition": c_partition,
+        "message_partition": message.partition,
+        "topic": message.topic,
+        "offset": message.offset,
+        "timestamp": message.timestamp,
+        "key": message.key,
+        "process_method": process_func.__name__,
+    }
 
 
 def consuming_error(
@@ -30,48 +30,39 @@ def consuming_error(
     c_partition: int,
     process_func: Callable,
     consumer: AIOKafkaConsumer,
-) -> str:
+) -> dict:
     """컨슈머 에러 로깅
-    - message :
-        - topic_infomer --> {consumer.assignment()}
-        - consumer_id --> {consumer._client._client_id}
-        - partition --> {c_partition}
-        - method --> {process_func.__name__}
-        - error_trace --> {traceback.format_exc()}
-        - error_message --> {str(error)}
 
-    error_data = {
-        "error_message": str(error),
-        "error_trace": traceback.format_exc(),
-        "failed_message": message,
-    }
+    Args:
+        error (Exception): 발생한 예외
+        c_partition (int): 요청한 파티션 번호
+        process_func (Callable): 처리하려던 함수
+        consumer (AIOKafkaConsumer): 카프카 컨슈머 인스턴스
+
+    Returns:
+        dict: 에러 로깅 정보를 담은 딕셔너리
     """
-    message = f"""
-        topic_infomer --> {consumer.assignment()}
-        consumer_id --> {consumer._client._client_id}
-        partition --> {c_partition}
-        method --> {process_func.__name__}
-        error_trace --> {traceback.format_exc()}
-        error_message --> {str(error)}
-    """
-
-    error_data = {
-        "error_message": str(error),
+    return {
+        "topic_info": str(consumer.assignment()),
+        "consumer_id": consumer._client._client_id,
+        "partition": c_partition,
+        "method": process_func.__name__,
         "error_trace": traceback.format_exc(),
-        "failed_message": message,
+        "error_message": str(error),
     }
-    return error_data
 
 
-def task_init_logging(process: Callable) -> str:
+def task_init_logging(process: Callable) -> dict:
     """태스크 초기화 로깅
-    프로세스 초기화 상태:
-        클래스: {process.__class__.__name__}
-        컨슈머 토픽: {process.consumer_topic}
-        파티션: {process.c_partition}
+
+    Args:
+        process (Callable): 초기화된 프로세스 객체
+
+    Returns:
+        dict: 초기화 상태 정보를 담은 딕셔너리
     """
-    return f""" 프로세스 초기화 상태:
-            클래스: {process.__class__.__name__}
-            컨슈머 토픽: {process.consumer_topic}
-            파티션: {process.c_partition}
-        """
+    return {
+        "class": process.__class__.__name__,
+        "consumer_topic": process.consumer_topic,
+        "partition": process.c_partition,
+    }
