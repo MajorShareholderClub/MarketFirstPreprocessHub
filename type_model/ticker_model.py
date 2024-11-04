@@ -114,7 +114,7 @@ class MarketData(BaseModel):
             Decimal | int: 변화액. 계산 불가능한 경우 -1 반환
         """
         try:
-            # 이미 변화액이 있는 경우 (예: upbit, bithumb)
+            # 이미 변화액이 있는 경우 (예: upbit, bithumb, korbit)
             if len(data) >= 7 and MarketData._key_and_get_first_value(
                 api, data[6]
             ) not in (None, "", -1):
@@ -130,10 +130,6 @@ class MarketData(BaseModel):
                     # yesterday_last
                     # last - yesterday_last
                     prev_price = MarketData._key_and_get_first_value(api, data[4])
-                case "korbit":
-                    # open
-                    # last - open
-                    prev_price = MarketData._key_and_get_first_value(api, data[0])
                 case "okx":
                     # open24h
                     # last - open24h
@@ -189,10 +185,6 @@ class MarketData(BaseModel):
                     # yesterday_last
                     # ((last - yesterday_last) / yesterday_last) * 100
                     base_price = MarketData._key_and_get_first_value(api, data[4])
-                case "korbit":
-                    # opend
-                    # ((last - open) / open) * 100
-                    base_price = MarketData._key_and_get_first_value(api, data[0])
                 case "okx":
                     # open24h
                     # ((last - open24h) / open24h) * 100
@@ -243,13 +235,13 @@ class MarketData(BaseModel):
         """메모리 효율적인 API 데이터 처리"""
         cls._update_exchange_rate()
 
-        exchange = exchange.lower()  # 한 번만 변환
+        exchange = exchange.lower()
         is_korean_exchange = exchange in {
             "upbit",
             "bithumb",
             "korbit",
             "coinone",
-        }  # set 사용
+        }
         exchange_rate = cls._exchange_rate if is_korean_exchange else cls._DECIMAL_ONE
 
         price_data = cls._create_price_data(

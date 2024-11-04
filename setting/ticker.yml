@@ -67,15 +67,16 @@ coinone:
     - yesterday_last
     - target_volume
 
+
 korbit:
   parameter:
     - open
-    - ask
+    - close   
     - high
     - low
-    - last
-    - volume
-    - change
+    - prevClose
+    - priceChange
+    - priceChangePercent
 
 
 binance:
