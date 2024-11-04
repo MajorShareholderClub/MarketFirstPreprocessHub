@@ -75,6 +75,68 @@ classDiagram
         +from_api()
     }
 
+    class TickerPerformanceTester {
+        +generate_test_data()
+        +run_memory_test()
+        +run_speed_test()
+        +run_profiling()
+    }
+
+    class CoinMarketCollection {
+        +region
+        +market
+        +coin_symbol
+        +timestamp
+        +data
+    }
+
+    class ProcessedOrderBook {
+        +region
+        +market
+        +symbol
+        +highest_bid
+        +lowest_ask
+        +total_bid_volume
+        +total_ask_volume
+        +timestamp
+    }
+
+    class KafkaS3Connector {
+        +_get_topic_name()
+    }
+
+    class KafkaS3ConnectorConfig {
+        +<attributes>
+    }
+
+    class BatchConfig {
+        +<attributes>
+    }
+
+    class AsyncKafkaProducer {
+        +init_producer()
+        +stop()
+    }
+
+    class TimeStack {
+        +add_item()
+        +should_flush()
+        +flush()
+    }
+
+    class StackConfig {
+        +topic
+        +partition
+        +max_size
+        +timeout_ms
+    }
+
+    class TimeStacker {
+        +start()
+        +stop()
+        +add_item()
+    }
+
     AsyncKafkaHandler <|-- CommonConsumerSettingProcessor
     CommonConsumerSettingProcessor <|-- BaseAsyncTickerProcessor
     CommonConsumerSettingProcessor <|-- BaseAsyncOrderbookProcessor
@@ -90,18 +152,21 @@ classDiagram
 
     BaseAsyncTickerProcessor --> MarketData
     BaseAsyncOrderbookProcessor --> MarketData
-    
-    note for RegionTickerOrderbookProcessor "메인 프로세서 클래스"
-    note for AsyncKafkaHandler "Kafka 연결 및 메시지 처리"
-    note for CommonConsumerSettingProcessor "공통 소비자 설정"
-    note for BaseAsyncTickerProcessor "티커 데이터 처리"
-    note for BaseAsyncOrderbookProcessor "주문서 데이터 처리"
-    note for ExchangeProcessors "거래소별 프로세서 매핑"
-    note for BatchProcessor "배치 처리 관리"
-    note for TimeStacker "시간 기반 데이터 스태킹"
-    note for PartitionManager "파티션 모니터링"
-    note for AsyncLogger "비동기 로깅"
-    note for MarketData "시장 데이터 모델"
+
+    TickerPerformanceTester --> BaseAsyncTickerProcessor
+    CoinMarketCollection --> MarketData
+    ProcessedOrderBook --> BaseAsyncOrderbookProcessor
+
+    KafkaS3Connector --> KafkaS3ConnectorConfig
+
+    BatchProcessor --> BatchConfig
+    BatchProcessor --> AsyncKafkaProducer
+
+    TimeStacker --> TimeStack
+    TimeStacker --> StackConfig
+    TimeStacker --> TimeStack
+
+    AsyncKafkaProducer --> KafkaS3Connector
 ```
 
 ## 📈 Ticker
@@ -230,41 +295,55 @@ python main.py
 
 # 전체 파일구조 
 ```
-├── 📄 README.md                 # 이 문서
-├── 📁 logs                      # 📜 로그 파일 저장 디렉토리
-├── 🐍 main.py                   # 프로그램 진입점
+├── 📄 README.md                 # 프로젝트 설명 문서
+├── 📁 logs                      # 로그 파일 저장 디렉토리
+├── 🐍 main.py                   # 프로그램 진입점, 웹소켓 클라이언트 초기화
 ├── 📦 mq                        # 메시지 큐 관련 모듈
+│   ├── 🐍 dlt_producer.py       # Dead Letter Topic 프로듀서
 │   ├── ⚠️ exception             # 예외 처리 모듈
-│   │   ├── 🐍 __init__.py
+│   │   ├── __init__.py
 │   │   └── 🐍 m_exception.py    # 사용자 정의 예외 클래스
-│   ├── 🐍 kafka_config.py       # Kafka 설정 파일
-│   ├── 🐍 m_consumer.py         # Kafka 소비자 관련 코드
-│   └── 📊 types                 # 데이터 타입 정의
-│       ├── 🐍 __init__.py
-│       └── 🐍 market_data_type.py # 시장 데이터 타입 정의
-├── 🐍 order_ticker.py           # 주문 티커 관련 코드
-├── 📦 poetry.lock               # Poetry 의존성 파일
-├── 📄 pyproject.toml            # Poetry 프로젝트 설정 파일
-├── 📜 requirements.txt          # 프로젝트 의존성 파일
-├── ⚙️ setting                   # 설정 파일
-│   ├── 📄 config.yml            # 기본 설정 파일
-│   ├── 📄 ticker.yml            # 티커 설정 파일
-│   └── 📄 yml_load.py           # YAML 파일 로딩 코드
-├── 📥 sink_connector.py         # Sink Connector 관련 코드
-└── 📁 src                       # 소스 코드 디렉토리
-    ├── 📁 common                # 공통 기능 모듈
-    │   ├── 🐍 common_consumer.py  # 공통 소비자 코드
-    │   ├── 🐍 common_orderbook.py  # 공통 주문서 코드
-    │   └── 🐍 common_ticker.py     # 공통 티커 코드
-    ├── 🐍 config.py             # 전체 설정 관련 코드
-    ├── 🐍 data_format.py        # 데이터 포맷 관련 코드
-    ├── 🐍 logger.py             # 로깅 관련 코드
-    ├── 📖 orderbook             # 주문서 관련 모듈
-    │   ├── 🐍 asia_orderbook.py  # 아시아 주문서 처리
-    │   ├── 🐍 korea_orderbook.py  # 한국 주문서 처리
-    │   └── 🐍 ne_orderbook.py     # NE 주문서 처리
-    └── 📊 ticker                # 티커 관련 모듈
-        ├── 🐍 asia_ticker.py     # 아시아 티커 처리
-        ├── 🐍 korea_ticker.py     # 한국 티커 처리
-        └── 🐍 ne_ticker.py        # NE 티커 처리
+│   ├── 🛠️ kafka_config.py       # Kafka 설정 관리
+│   ├── 🐍 m_comsumer.py         # Kafka 컨슈머 구현
+│   ├── 🐍 m_producer.py         # Kafka 프로듀서 구현
+│   └── 🐍 partition_manager.py   # Kafka 파티션 모니터링
+├── 🐍 order_ticker.py           # 주문서/티커 처리 메인 클래스
+├── 📦 poetry.lock               # Poetry 의존성 잠금 파일
+├── 📄 pyproject.toml            # Poetry 프로젝트 설정
+├── 📜 requirements.txt          # 프로젝트 의존성 목록
+├── 🐍 run_tests.py              # 테스트 실행 스크립트
+├── ⚙️ setting                   # 설정 관리
+│   ├── 🛠️ ticker.yml            # 티커 처리 설정
+│   └── 🛠️ yml_load.py           # YAML 설정 로드
+├── 🐍 sink_connector.py         # Kafka to S3 커넥터
+├── 📁 src                       # 소스 코드
+│   ├── 📁 common                # 공통 모듈
+│   │   ├── 📁 admin             # 관리 기능
+│   │   │   ├── 🐍 batch_processor.py  # 배치 처리 관리
+│   │   │   ├── 📁 logging       # 로깅 관련
+│   │   │   │   ├── 🐍 logger.py        # 비동기 로거
+│   │   │   │   └── 🐍 logging_text.py  # 로그 메시지 포맷
+│   │   │   └── 🐍 time_stracker.py     # 시간 기반 데이터 스태킹
+│   │   ├── 🐍 common_consumer.py  # 공통 컨슈머 설정
+│   │   ├── 🐍 common_orderbook.py # 공통 주문서 처리
+│   │   └── 🐍 common_ticker.py    # 공통 티커 처리
+│   ├── 🛠️ config.py             # 애플리케이션 설정
+│   ├── 📖 orderbook             # 주문서 처리
+│   │   ├── 🐍 asia_orderbook.py  # 아시아 거래소
+│   │   ├── 🐍 korea_orderbook.py # 한국 거래소
+│   │   └── 🐍 ne_orderbook.py    # NE 거래소
+│   └── 📊 ticker                # 티커 처리
+│       ├── 🐍 korea_ticker.py    # 한국 거래소
+│       └── 🐍 ne_asia_ticker.py  # NE/아시아 거래소
+├── 📁 tests                     # 테스트
+│   ├── 🐍 performance_test.py   # 성능 테스트
+│   └── 🐍 run_performance_tests.py # 테스트 실행
+└── 📁 type_model               # 데이터 모델
+    ├── __init__.py
+    ├── 🐍 config_model.py      # 설정 모델
+    ├── 🐍 kafka_model.py       # Kafka 관련 모델
+    ├── 🐍 orderbook_model.py   # 주문서 데이터 모델
+    └── 🐍 ticker_model.py      # 티커 데이터 모델
+```
+
 
