@@ -18,7 +18,7 @@ class RegionTickerOrderbookProcessor:
         self.logger = AsyncLogger(name="init", folder="init", file="task-init")
         self.configs = create_exchange_configs(is_ticker=self.is_ticker)
 
-    async def _create_task(self, config) -> None:
+    async def _create_task(self, config: dict) -> None:
         await self.logger.debug(
             f"""
             태스크 생성 정보:
@@ -26,7 +26,6 @@ class RegionTickerOrderbookProcessor:
             카프카 설정: {config['kafka_config']}
             """,
         )
-
         process = config["class_address"](**config["kafka_config"])
         await process.initialize()
 

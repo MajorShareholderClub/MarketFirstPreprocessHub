@@ -20,25 +20,24 @@ class BaseAsyncTickerProcessor(CommonConsumerSettingProcessor):
         symbol: str = ticker["symbol"]
         params: dict = TickerProcessorConfig(market=market).ticker_parameter
 
-        # 데이터 컬럼 추출
-        collection: list[CoinMarketCollection] = [
-            CoinMarketCollection(
-                region=region,
-                market=market,
-                coin_symbol=symbol,
-                timestamp=self.get_timestamp(json.loads(item)),
-                data=[
-                    MarketData.from_api(
-                        api=json.loads(item),
-                        data=params,
-                        exchange=market,
-                    )
-                    .model_dump()
-                    .values()
-                ][0],
-            ).model_dump()
-            for item in ticker["data"]
-        ]
+        collection: list[CoinMarketCollection] = []
+        for item in ticker["data"]:
+            parsed_data = json.loads(item)  # 한 번만 파싱
+            collection.append(
+                CoinMarketCollection(
+                    region=region,
+                    market=market,
+                    coin_symbol=symbol,
+                    timestamp=self.get_timestamp(parsed_data),
+                    data=[
+                        MarketData.from_api(
+                            api=parsed_data,
+                            data=params,
+                            exchange=market,
+                        ).model_dump()["data"]
+                    ],
+                ).model_dump()
+            )
 
         return collection
 

@@ -4,10 +4,12 @@ from dataclasses import dataclass
 from typing import TypeVar, Generic
 from collections import deque
 from weakref import proxy
+import traceback
 
 import time
 import asyncio
 from datetime import datetime
+from mq.dlt_producer import DLTProducer
 
 T = TypeVar("T")
 
@@ -29,6 +31,7 @@ class TimeStack(Generic[T]):
         self,
         config: StackConfig,
         flush_handler: Callable[[list[T], StackConfig], Awaitable[None]],
+        dlt_producer: DLTProducer | None = None,
     ):
         self.config = config
         self._items: deque[T] = deque(maxlen=config.max_size)
@@ -36,9 +39,9 @@ class TimeStack(Generic[T]):
         self.last_update: float = time.time()
         self.created_at: datetime = datetime.now()
         self.flush_handler = flush_handler
+        self.dlt_producer = dlt_producer
 
     def add_item(self, item: T) -> None:
-        # 직접 _items를 사용하면 됩니다
         self._items.append(item)
         self.last_update = time.time()
 
@@ -59,6 +62,17 @@ class TimeStack(Generic[T]):
 
         try:
             await self.flush_handler(items, self.config)
+        except Exception as e:
+            if self.dlt_producer:
+                async with self.dlt_producer as dlt_producer:
+                    for item in items:
+                        await dlt_producer.send_to_dlt(
+                            original_topic=self.config.topic,
+                            original_partition=self.config.partition,
+                            error_message=str(e),
+                            error_traceback=traceback.format_exc(),
+                            payload=item,
+                        )
         finally:
             del items
 
@@ -109,7 +123,7 @@ class TimeStacker:
     async def add_item(self, item: T, config: StackConfig) -> None:
         """아이템 추가"""
         async with self._lock:
-            stack = self.get_or_create_stack(config)
+            stack: TimeStack = self.get_or_create_stack(config)
             stack.add_item(item)
 
             if stack.should_flush():
@@ -123,10 +137,10 @@ class TimeStacker:
     async def _cleanup_old_stacks(self) -> None:
         """오래된 스택 정리"""
         current_time = time.time()
-        keys_to_remove = []
+        keys_to_remove: deque[tuple[str, int]] = deque(maxlen=100)
 
         for key, stack in self.stacks.items():
-            if current_time - stack.last_update > 300:  # 5분 이상 미사용
+            if current_time - stack.last_update > 60:  # 1분 이상 미사용
                 keys_to_remove.append(key)
 
         for key in keys_to_remove:

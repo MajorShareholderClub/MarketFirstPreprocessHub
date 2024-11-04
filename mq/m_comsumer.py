@@ -6,7 +6,7 @@ from random import randint
 from decimal import Decimal
 from typing import Final, Any
 
-from aiokafka import AIOKafkaConsumer, AIOKafkaProducer, TopicPartition
+from aiokafka import AIOKafkaConsumer, TopicPartition
 
 from src.common.admin.logging.logger import AsyncLogger
 from type_model.kafka_model import KafkaConsumerConfig
@@ -20,7 +20,7 @@ def default(obj: Any) -> str:
     raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 
-class AsyncKafkaHandler:
+class AsyncKafkaConfigration:
     """비동기 Kafka 연결을 처리하는 기본 클래스."""
 
     def __init__(
@@ -37,7 +37,6 @@ class AsyncKafkaHandler:
             name="kafka", folder="kafka/handler", file="consumer_handler"
         )
         self.consumer: AIOKafkaConsumer | None = None
-        self.producer: AIOKafkaProducer | None = None
         self.c_partition: Final[int] = c_partition
         self.assigned_partition: int | None = None
         self.partition_manager: PartitionManager | None = None
@@ -66,8 +65,7 @@ class AsyncKafkaHandler:
             auto_offset_reset="earliest",
             enable_auto_commit=False,
             value_deserializer=lambda x: json.loads(x.decode("utf-8")),
-        )
-
+        ).to_dict()
         self.consumer = AIOKafkaConsumer(**config)
         await self.logger.debug(f"소비자가 초기화되었습니다: {self.consumer_topic}")
 
@@ -92,20 +90,6 @@ class AsyncKafkaHandler:
         )
         await self.partition_manager.start_monitoring()
 
-        # Producer 초기화
-        self.producer = AIOKafkaProducer(
-            bootstrap_servers=self.bootstrap_servers,
-            key_serializer=lambda x: json.dumps(x).encode("utf-8"),
-            value_serializer=lambda x: json.dumps(x, default=default).encode("utf-8"),
-            max_batch_size=1000000,
-            max_request_size=1000000,
-            enable_idempotence=True,
-            retry_backoff_ms=100,
-            acks=-1,
-        )
-        await self.producer.start()
-        await self.logger.debug("생산자가 초기화되었습니다")
-
     async def close(self) -> None:
         """리소스 정리"""
         if self.partition_manager:
@@ -113,8 +97,5 @@ class AsyncKafkaHandler:
 
         if self.consumer:
             await self.consumer.stop()
-
-        if self.producer:
-            await self.producer.stop()
 
         await self.logger.debug("Kafka 연결이 종료되었습니다.")
