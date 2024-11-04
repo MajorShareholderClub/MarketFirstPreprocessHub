@@ -13,6 +13,8 @@ class DataType(Enum):
     TIME_METRICS = "TimeMetricsProcessed"
     ORDERBOOK_ALL_REGION = "OrderbookProcessedAllRegion"
     ORDERBOOK_REGION = "OrderbookProcessedRegion"
+    TICKER_SIGNAL = "MarketArbitrageSignalProcessed"
+    TICKER_PROCESSED = "MarketArbitrageProcessed"
 
 
 @dataclass
@@ -147,6 +149,14 @@ def create_global_connectors() -> None:
             "bucket": "spark-streaming-orderbook",
             "flush_size": "40",
         },
+        DataType.TICKER_PROCESSED: {
+            "bucket": "spark-streaming-ticker",
+            "flush_size": "30",
+        },
+        DataType.TICKER_SIGNAL: {
+            "bucket": "spark-streaming-ticker",
+            "flush_size": "30",
+        },
     }
 
     for data_type, settings in global_data_types.items():
@@ -173,7 +183,7 @@ def _create_single_connector(config: KafkaS3ConnectorConfig) -> None:
 
 def create_all_connectors() -> None:
     """모든 커넥터를 생성하는 메인 함수"""
-    create_regional_connectors()
+    # create_regional_connectors()
     create_global_connectors()
 
 
