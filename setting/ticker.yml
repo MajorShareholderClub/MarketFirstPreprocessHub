@@ -75,6 +75,7 @@ korbit:
     - high
     - low
     - prevClose
+    - volume
     - priceChange
     - priceChangePercent
 
