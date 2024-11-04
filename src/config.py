@@ -1,13 +1,14 @@
 from dataclasses import dataclass
-from typing import TypedDict, Required
+
+import msgspec
 from functools import lru_cache
 
 from mq.kafka_config import (
-    KafkaConfig,
     Region,
     ExchangeInfo,
     TickerConfigExchange,
     OrderbookConfigExchange,
+    KafkaMetadataConfig,
 )
 from src.ticker.korea_ticker import (
     UpbithumbAsyncTickerProcessor,
@@ -59,9 +60,12 @@ OrderbookClass = (
 )
 
 
-class TickerOrderConfig(TypedDict):
-    kafka_config: Required[KafkaConfig]
-    class_address: Required[type[TickerClass] | type[OrderbookClass]]
+class TickerOrderConfig(msgspec.Struct, dict=True, weakref=True):
+    kafka_config: KafkaMetadataConfig
+    class_address: type[TickerClass] | type[OrderbookClass]
+
+    def to_dict(self) -> dict:
+        return {f: getattr(self, f) for f in self.__struct_fields__}
 
 
 @dataclass
@@ -158,7 +162,7 @@ def create_exchange_configs(is_ticker: bool = True) -> dict[Region, dict[str, Ti
                 region_configs[exchange_name.lower()] = TickerOrderConfig(
                     kafka_config=config.kafka_metadata_config(),
                     class_address=processor_class,
-                )
+                ).to_dict()
 
         if region_configs:
             result[region] = region_configs

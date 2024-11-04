@@ -1,5 +1,4 @@
 from enum import Enum
-from dataclasses import dataclass
 from typing import TypedDict
 
 
@@ -24,21 +23,3 @@ class ExchangeConfig(TypedDict):
     GATEIO: RegionTask
     BINANCE: RegionTask
     KRAKEN: RegionTask
-
-
-@dataclass(frozen=True)
-class BaseConfigDetails:
-    """기본 설정을 담는 데이터 클래스"""
-
-    region: Region
-    exchange_name: str
-    c_partition: int
-    p_partition: int
-
-    def group_id(self, type_suffix: str) -> str:
-        """Kafka consumer group id"""
-        return f"{type_suffix}_group_id_{self.region.value}"
-
-    def product_topic_name(self, type_suffix: str) -> str:
-        """Kafka producer topic name"""
-        return f"Region{self.region.value}_{type_suffix}Preprocessing"

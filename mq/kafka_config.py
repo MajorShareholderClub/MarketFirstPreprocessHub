@@ -1,43 +1,60 @@
-from dataclasses import asdict
-from typing import Generic, TypeVar
-from type_model.kafka_model import KafkaConfig
-from type_model.config_model import BaseConfigDetails, Region, ExchangeConfig
+import msgspec
+from typing import TypeVar, Generic
+from type_model.kafka_model import KafkaMetadataConfig
+from type_model.config_model import Region, ExchangeConfig
 
 T = TypeVar("T", bound="BaseConfigDetails")
 
 
-class TickerConfigDetails(BaseConfigDetails):
-    """Ticker 전용 설정을 담는 데이터 클래스"""
+class BaseConfigDetails(msgspec.Struct):
+    """기본 설정을 담는 데이터 클래스"""
 
-    def kafka_metadata_config(self) -> KafkaConfig:
+    region: Region
+    exchange_name: str
+    c_partition: int
+    p_partition: int
+
+    def group_id(self, type_suffix: str) -> str:
+        """Kafka consumer group id"""
+        return f"{type_suffix}_group_id_{self.region.value}"
+
+    def product_topic_name(self, type_suffix: str) -> str:
+        """Kafka producer topic name"""
+        return f"Region{self.region.value}_{type_suffix}Preprocessing"
+
+
+class TickerConfigDetails(BaseConfigDetails):
+    """Ticker 전용 설정을 담는 구조체"""
+
+    def kafka_metadata_config(self) -> dict:
         """Kafka 설정 정보를 반환"""
-        return asdict(
-            KafkaConfig(
-                consumer_topic=f"{self.region.name.lower()}SocketDataIn-ticker",
-                p_partition=self.p_partition,
-                c_partition=self.c_partition,
-                producer_topic=self.product_topic_name("Ticker"),
-                group_id=self.group_id("Ticker"),
-                p_key=f"{self.exchange_name.capitalize()}Ticker",
-            )
-        )
+        config = KafkaMetadataConfig(
+            consumer_topic=f"{self.region.name.lower()}SocketDataIn-ticker",
+            p_partition=self.p_partition,
+            c_partition=self.c_partition,
+            producer_topic=self.product_topic_name("Ticker"),
+            group_id=self.group_id("Ticker"),
+            p_key=f"{self.exchange_name.capitalize()}Ticker",
+            transaction_id="Ticker_Processor_Transaction",
+        ).to_dict()
+        return config
 
 
 class OrderbookConfigDetails(BaseConfigDetails):
-    """Orderbook 전용 설정을 담는 데이터 클래스"""
+    """Orderbook 전용 설정을 담는 구조체"""
 
-    def kafka_metadata_config(self) -> KafkaConfig:
+    def kafka_metadata_config(self) -> dict:
         """Kafka 설정 정보를 반환"""
-        return asdict(
-            KafkaConfig(
-                consumer_topic=f"{self.region.name.lower()}SocketDataIn-orderbook",
-                p_partition=self.p_partition,
-                c_partition=self.c_partition,
-                producer_topic=self.product_topic_name("Orderbook"),
-                group_id=self.group_id("Orderbook"),
-                p_key=f"{self.exchange_name.capitalize()}Orderbook",
-            )
-        )
+        config = KafkaMetadataConfig(
+            consumer_topic=f"{self.region.name.lower()}SocketDataIn-orderbook",
+            p_partition=self.p_partition,
+            c_partition=self.c_partition,
+            producer_topic=self.product_topic_name("Orderbook"),
+            group_id=self.group_id("Orderbook"),
+            p_key=f"{self.exchange_name.capitalize()}Orderbook",
+            transaction_id="Orderbook_Processor_Transaction",
+        ).to_dict()
+        return config
 
 
 class ExchangeInfo:
@@ -49,11 +66,11 @@ class ExchangeInfo:
         BITHUMB=(Region.KOREA, "bithumb", 1),
         COINONE=(Region.KOREA, "coinone", 2),
         KORBIT=(Region.KOREA, "korbit", 3),
-        # Asian exchanges
+        # # Asian exchanges
         OKX=(Region.ASIA, "okx", 0),
         BYBIT=(Region.ASIA, "bybit", 1),
         GATEIO=(Region.ASIA, "gateio", 2),
-        # NE exchanges
+        # # NE exchanges
         BINANCE=(Region.NE, "binance", 0),
         KRAKEN=(Region.NE, "kraken", 1),
     )

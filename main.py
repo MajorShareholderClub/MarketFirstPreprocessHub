@@ -18,22 +18,15 @@ async def coin_present_websocket(connection_class) -> None:
     # 스레드 풀을 생성
     with ThreadPoolExecutor(max_workers=2) as executor:
         # run_in_executor 사용하여 비동기 작업 실행
-        # order_task = loop.run_in_executor(
-        #     executor,
-        #     lambda: asyncio.run(
-        #         run_coin_websocket(connection_class, "orderbook", False)
-        #     ),
-        # )
-        ticker_task = loop.run_in_executor(
+        loop.run_in_executor(
+            executor,
+            lambda: asyncio.run(
+                run_coin_websocket(connection_class, "orderbook", False)
+            ),
+        )
+        loop.run_in_executor(
             executor,
             lambda: asyncio.run(run_coin_websocket(connection_class, "ticker", True)),
-        )
-
-        # 두 작업이 완료될 때까지 기다림
-        await asyncio.gather(
-            # order_task,
-            ticker_task,
-            return_exceptions=False,
         )
 
 

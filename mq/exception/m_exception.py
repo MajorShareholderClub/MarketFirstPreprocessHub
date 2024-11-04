@@ -3,6 +3,8 @@ from __future__ import annotations
 import time
 import json
 import functools
+import asyncio
+import traceback
 from enum import Enum, auto
 from typing import Callable, ParamSpec, TypeVar, Awaitable
 
@@ -90,14 +92,28 @@ def handle_kafka_errors(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitabl
         except Exception as e:
             match e:
                 case KafkaProcessingError():
-                    await logger.error(f"Kafka 처리 오류: {e.detail}")
-                case ConnectionError():
-                    await logger.error(f"연결 오류: {str(e)}")
-                case ValueError():
-                    await logger.error(f"값 오류: {str(e)}")
+                    raise KafkaProcessingError(
+                        message="Kafka consumer가 초기화되지 않았습니다",
+                        severity=ErrorType.INITIALIZATION,
+                        context=ErrorContext(
+                            exchange="None",
+                            operation="start_processing_with_partition_management",
+                            timestamp=asyncio.get_event_loop().time(),
+                            details=traceback.format_exc(),
+                        ),
+                    )
+                case KeyError() | ConnectionError() | ValueError():
+                    raise KafkaProcessingError(
+                        message="연결 오류",
+                        severity=ErrorType.KAFKA_CONNECTION,
+                        context=ErrorContext(
+                            exchange="None",
+                            operation="start_processing_with_partition_management",
+                            timestamp=asyncio.get_event_loop().time(),
+                            details=traceback.format_exc(),
+                        ),
+                    )
                 case _:
-                    import traceback
-
                     await logger.error(
                         f"예상치 못한 오류: {str(e)} --> {traceback.print_exc()}",
                     )

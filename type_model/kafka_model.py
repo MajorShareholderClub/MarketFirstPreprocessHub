@@ -1,14 +1,18 @@
+import msgspec
+from typing import Callable
 from aiokafka import AIOKafkaProducer
-from dataclasses import dataclass, field
-from typing import TypedDict, Callable, Any, Required
-import os
 
 
-@dataclass
-class KafkaConfigProducer:
+class DictonaryBuiltins(msgspec.Struct, dict=True, weakref=True):
+    """딕셔너리로 변환"""
+
+    def to_dict(self) -> dict:
+        return {f: getattr(self, f) for f in self.__struct_fields__}
+
+
+class KafkaConfigProducer(DictonaryBuiltins):
     """카프카 설정 값"""
 
-    producer: AIOKafkaProducer
     producer_topic: str
     p_partition: int
     p_key: str
@@ -16,37 +20,44 @@ class KafkaConfigProducer:
     batch: list[dict]
 
 
-class KafkaConsumerConfig(TypedDict):
-    bootstrap_servers: Required[str]
-    group_id: Required[str]
-    client_id: Required[str]
-    auto_offset_reset: Required[str]
-    enable_auto_commit: Required[bool]
-    value_deserializer: Required[Callable[[Any], Any]]
+class KafkaDeadLetterTopic(DictonaryBuiltins):
+    """DLT 카프카 설정 값"""
+
+    key: str | None
+    original_topic: str
+    original_partition: int
+    error_message: str
+    error_traceback: str
+    timestamp: str
+    message: dict | list
 
 
-@dataclass(frozen=True)
-class KafkaConfig:
+class KafkaConsumerConfig(DictonaryBuiltins):
+    bootstrap_servers: str
+    group_id: str
+    client_id: str
+    auto_offset_reset: str
+    enable_auto_commit: bool
+    value_deserializer: Callable
+
+
+class KafkaMetadataConfig(DictonaryBuiltins):
+    """Kafka 설정 정보"""
+
     consumer_topic: str
     p_partition: int
     c_partition: int
     group_id: str
     producer_topic: str
     p_key: str
+    transaction_id: str | None = None
 
 
-@dataclass
-class BatchConfig:
+class BatchConfig(DictonaryBuiltins):
     """배치 처리를 위한 환경 설정 값"""
 
-    size: int = field(default_factory=lambda: int(os.getenv("BATCH_SIZE", "20")))
-    timeout: float = field(
-        default_factory=lambda: float(os.getenv("BATCH_TIMEOUT", "10.0"))
-    )
-    max_memory_mb: int = field(
-        default_factory=lambda: int(os.getenv("MAX_MEMORY_MB", "1000"))
-    )
-    retry_count: int = field(default_factory=lambda: int(os.getenv("RETRY_COUNT", "3")))
-    retry_delay: float = field(
-        default_factory=lambda: float(os.getenv("RETRY_DELAY", "1.0"))
-    )
+    size: int = 20
+    timeout: float = 10.0
+    max_memory_mb: int = 1000
+    retry_count: int = 3
+    retry_delay: float = 1.0
