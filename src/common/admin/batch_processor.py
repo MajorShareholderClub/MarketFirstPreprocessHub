@@ -5,14 +5,17 @@ import time
 import psutil
 import pympler.asizeof
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import TypeVar, Callable, Any
+from aiokafka.errors import KafkaError
 
 from mq.m_producer import AsyncKafkaProducer
 from mq.dlt_producer import DLTProducer
 from type_model.kafka_model import KafkaConfigProducer
+from src.common.admin.metrics_manager import MetricsManager
 from src.common.admin.logging.logger import AsyncLogger
 from src.common.admin.time_stracker import TimeStacker, StackConfig
+from src.common.admin.metrics_manager import ProcessingMetrics
 
 
 T = TypeVar("T")
@@ -26,6 +29,7 @@ class BatchProcessor:
     # fmt: off
     def __init__(self) -> None:
         """배치 처리기 초기화"""
+        self.metrics_manager = MetricsManager()
         self.process = psutil.Process()
         self.logger = AsyncLogger(
             name="kafka", folder=f"kafka/batch", file=f"processing_{today}"
@@ -91,11 +95,25 @@ class BatchProcessor:
                 - 토픽: {config.topic}
                 - 파티션: {config.partition}
                 - 배치 크기: {len(items)}
-                - 내용물 : {items}
                 - 배치 용량: {size_of_batch} Bytes
                 - 처리 시간: {processing_time:.3f}초
                 - 메모리 사용량: {memory_usage:.2f}MB
                 """
+            )
+            await self.metrics_manager.update_metrics(
+                processing_time=processing_time,
+                batch_size=len(items),
+                topic=config.topic,
+                partition=config.partition
+            )
+        except KafkaError as e:
+            await self.logger.error(f"Kafka 오류: {e}")
+            await self.metrics_manager.update_metrics(
+                batch_size=len(items),
+                processing_time=processing_time,
+                topic=config.topic,
+                partition=config.partition,
+                is_success=False
             )
         finally:
             items.clear()
@@ -103,6 +121,7 @@ class BatchProcessor:
     async def process_current_batch(
         self, process: ProcessFunction, kafka_config: KafkaConfigProducer
     ) -> None:
+        
         """배치 데이터 처리 및 전송"""
         self.current_kafka_config = kafka_config
 
