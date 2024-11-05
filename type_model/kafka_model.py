@@ -56,8 +56,6 @@ class KafkaMetadataConfig(DictonaryBuiltins):
 class BatchConfig(DictonaryBuiltins):
     """배치 처리를 위한 환경 설정 값"""
 
-    size: int = 20
-    timeout: float = 10.0
-    max_memory_mb: int = 1000
-    retry_count: int = 3
-    retry_delay: float = 1.0
+    size: int = 5
+    timeout: float = 1000
+    max_memory_mb: int = 300

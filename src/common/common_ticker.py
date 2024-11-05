@@ -20,26 +20,21 @@ class BaseAsyncTickerProcessor(CommonConsumerSettingProcessor):
         symbol: str = ticker["symbol"]
         params: dict = TickerProcessorConfig(market=market).ticker_parameter
 
-        collection: list[CoinMarketCollection] = []
         for item in ticker["data"]:
             parsed_data = json.loads(item)  # 한 번만 파싱
-            collection.append(
-                CoinMarketCollection(
-                    region=region,
-                    market=market,
-                    coin_symbol=symbol,
-                    timestamp=self.get_timestamp(parsed_data),
-                    data=[
-                        MarketData.from_api(
-                            api=parsed_data,
-                            data=params,
-                            exchange=market,
-                        ).model_dump()["data"]
-                    ],
-                ).model_dump()
-            )
-
-        return collection
+            return CoinMarketCollection(
+                region=region,
+                market=market,
+                coin_symbol=symbol,
+                timestamp=self.get_timestamp(parsed_data),
+                data=[
+                    MarketData.from_api(
+                        api=parsed_data,
+                        data=params,
+                        exchange=market,
+                    ).model_dump()["data"]
+                ],
+            ).model_dump()
 
     def get_timestamp(self, ticker: dict) -> int:
         """거래소에 따른 timestamp 처리. 하위 클래스에서 재정의 가능."""

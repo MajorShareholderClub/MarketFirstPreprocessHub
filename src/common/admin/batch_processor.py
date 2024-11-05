@@ -2,15 +2,14 @@ from __future__ import annotations
 from types import TracebackType
 
 import time
-import traceback
 import psutil
 import pympler.asizeof
 
-import asyncio
 from datetime import datetime
 from typing import TypeVar, Callable, Any
 
 from mq.m_producer import AsyncKafkaProducer
+from mq.dlt_producer import DLTProducer
 from type_model.kafka_model import KafkaConfigProducer
 from src.common.admin.logging.logger import AsyncLogger
 from src.common.admin.time_stracker import TimeStacker, StackConfig
@@ -31,7 +30,7 @@ class BatchProcessor:
         self.logger = AsyncLogger(
             name="kafka", folder=f"kafka/batch", file=f"processing_{today}"
         )
-        self.time_stacker = TimeStacker(flush_handler=self._handle_flush)
+        self.time_stacker = TimeStacker(flush_handler=self._handle_flush, dlt_producer=DLTProducer())
         self.producer = AsyncKafkaProducer()
 
         
@@ -73,11 +72,14 @@ class BatchProcessor:
             start_time: float = time.time()
             size_of_batch: int = pympler.asizeof.asizeof(items)
             
-            chunk_size: int = max(1, len(items) // 2, 1)
-            for i in range(0, len(items), chunk_size):
-                chunk: list[dict] = items[i : i + chunk_size]
-                await self._batch_send_kafka(chunk, self.current_kafka_config)
-                del chunk
+            if len(items) >= 10:
+                chunk_size: int = max(1, len(items) // 2, 1)
+                for i in range(0, len(items), chunk_size):
+                    chunk: list[dict] = items[i : i + chunk_size]
+                    await self._batch_send_kafka(chunk, self.current_kafka_config)
+                    del chunk
+            else:
+                await self._batch_send_kafka(items, self.current_kafka_config)
 
 
             processing_time: float = time.time() - start_time
@@ -89,6 +91,7 @@ class BatchProcessor:
                 - 토픽: {config.topic}
                 - 파티션: {config.partition}
                 - 배치 크기: {len(items)}
+                - 내용물 : {items}
                 - 배치 용량: {size_of_batch} Bytes
                 - 처리 시간: {processing_time:.3f}초
                 - 메모리 사용량: {memory_usage:.2f}MB
@@ -105,9 +108,7 @@ class BatchProcessor:
 
         stack_config = StackConfig(
             topic=kafka_config["producer_topic"],
-            partition=kafka_config["p_partition"],
-            max_size=10,
-            timeout_ms=250,
+            partition=kafka_config["p_partition"]
         )
 
         for data in kafka_config["batch"]:

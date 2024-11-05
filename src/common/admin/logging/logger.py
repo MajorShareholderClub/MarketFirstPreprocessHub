@@ -29,6 +29,7 @@ class AsyncLogHandler:
         self.queue: Queue = Queue(maxsize=1000)
         self.task: Optional[asyncio.Task] = None
         self._stop = False
+        self._processing = False
 
     async def start(self) -> None:
         """로그 처리 작업 시작"""
@@ -36,14 +37,18 @@ class AsyncLogHandler:
 
     async def stop(self) -> None:
         """로그 처리 작업 중지"""
-        self._stop = True
-        if self.task:
-            await self.queue.put(None)  # 종료 신호
-            await self.task
+        if not self._stop and self._processing:
+            self._stop = True
+            try:
+                await self.queue.put(None)  # 종료 신호
+                if self.task:
+                    await self.task
+            except Exception as e:
+                print(f"Error stopping log handler: {e}", file=sys.stderr)
 
     async def emit(self, record: logging.LogRecord) -> None:
         """로그 레코드 큐에 추가"""
-        if record.levelno >= self.level:
+        if not self._stop and record.levelno >= self.level:
             try:
                 await self.queue.put(record)
             except QueueFull:
@@ -54,16 +59,30 @@ class AsyncLogHandler:
 
     async def _process_logs(self) -> None:
         """큐에서 로그를 처리하는 메인 루프"""
+        self._processing = True
         while not self._stop:
             try:
                 record = await self.queue.get()
                 if record is None:  # 종료 신호
                     break
-                self.handler.emit(record)
+
+                try:
+                    self.handler.emit(record)
+                except Exception as e:
+                    print(f"Error processing log: {e}", file=sys.stderr)
+                finally:
+                    try:
+                        self.queue.task_done()
+                    except ValueError:
+                        # task_done이 이미 호출된 경우 무시
+                        pass
+
+            except asyncio.CancelledError:
+                break
             except Exception as e:
-                print(f"Error processing log: {e}", file=sys.stderr)
-            finally:
-                self.queue.task_done()
+                print(f"Error in log processing loop: {e}", file=sys.stderr)
+
+        self._processing = False
 
 
 class AsyncLogger:

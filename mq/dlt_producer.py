@@ -8,14 +8,13 @@ import json
 
 
 class DLTProducer:
-    def __init__(self, bootstrap_servers: str):
+    def __init__(self) -> None:
         self.producer = AIOKafkaProducer(
-            bootstrap_servers=bootstrap_servers,
+            bootstrap_servers="kafka1:19092,kafka2:29092,kafka3:39092",
             value_serializer=lambda v: json.dumps(v).encode("utf-8"),
             acks="all",
             enable_idempotence=True,
             compression_type="gzip",
-            retries=3,
             linger_ms=100,
         )
         self._is_running = False
@@ -58,9 +57,4 @@ class DLTProducer:
         ).to_dict()
 
         dlt_topic = self.get_dlt_topic(original_topic)
-
-        try:
-            await self.producer.send_and_wait(topic=dlt_topic, value=dlt_message)
-        except Exception as e:
-            # DLT 전송 실패 시 로깅만 하고 예외는 발생시키지 않음
-            print(f"DLT 전송 실패: {str(e)}")
+        await self.producer.send_and_wait(topic=dlt_topic, value=dlt_message)

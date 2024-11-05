@@ -82,15 +82,13 @@ class CommonConsumerSettingProcessor(AsyncKafkaConfigration):
                 # log message
                 batch.append(message.value)
 
-                # 배치 사이즈가 충분하거나 시간이 초과되었거나 메모리 사용량이 초과되었을 경우 배치 처리
                 current_time = asyncio.get_event_loop().time()
                 should_process = (
                     len(batch) >= self.batch_config["size"]
-                    or current_time - last_process_time >= self.batch_config["timeout"]
-                    or self.batch_processor._check_memory_usage()
-                    > self.batch_config["max_memory_mb"]
+                    or (current_time - last_process_time) * 1000 >= self.batch_config["timeout"]
+                    or self.batch_processor._check_memory_usage() > self.batch_config["max_memory_mb"]
                 )
-
+                # 용량 초과 혹은 시간 초과 시 배치 처리
                 if should_process:
                     consuming: str = consuming_message(
                         message=message,
@@ -109,12 +107,12 @@ class CommonConsumerSettingProcessor(AsyncKafkaConfigration):
                                 batch=batch,
                             ).to_dict()
                         )
-
                     batch.clear()
-                    last_process_time = current_time
-
-        except (TypeError, ValueError, Exception) as error:
+                    last_process_time = asyncio.get_event_loop().time()  # 배치 처리 후 시간 초기화
+                    
+        except (TypeError, ValueError) as error:
             await self._handle_processing_error(error, process_func)
+
 
     async def _handle_processing_error(self, error: Exception, process_func) -> None:
         """에러 발생시 로깅 및 에러 토픽으로 전송"""
