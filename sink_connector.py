@@ -4,17 +4,30 @@ from typing import Any
 from mq.kafka_config import Region
 import json
 import requests
+from setting.kafka_setting import (
+    KAFKA_CONNECT_URL,
+    BOOTSTRAPSERVER,
+    MINIO_URL,
+    TOPIC_TICKER,
+    TOPIC_ORDERBOOK,
+    TOPIC_ARBITRAGE,
+    TOPIC_TIME_METRICS,
+    TOPIC_ORDERBOOK_ALL_REGION,
+    TOPIC_ORDERBOOK_REGION,
+    TOPIC_TICKER_SIGNAL,
+    TOPIC_TICKER_PROCESSED,
+)
 
 
 class DataType(Enum):
-    TICKER = "Ticker"
-    ORDERBOOK = "Orderbook"
-    ARBITRAGE = "ArbitrageProcessed"
-    TIME_METRICS = "TimeMetricsProcessed"
-    ORDERBOOK_ALL_REGION = "OrderbookProcessedAllRegion"
-    ORDERBOOK_REGION = "OrderbookProcessedRegion"
-    TICKER_SIGNAL = "MarketArbitrageSignalProcessed"
-    TICKER_PROCESSED = "MarketArbitrageProcessed"
+    TICKER = TOPIC_TICKER
+    ORDERBOOK = TOPIC_ORDERBOOK
+    ARBITRAGE = TOPIC_ARBITRAGE
+    TIME_METRICS = TOPIC_TIME_METRICS
+    ORDERBOOK_ALL_REGION = TOPIC_ORDERBOOK_ALL_REGION
+    ORDERBOOK_REGION = TOPIC_ORDERBOOK_REGION
+    TICKER_SIGNAL = TOPIC_TICKER_SIGNAL
+    TICKER_PROCESSED = TOPIC_TICKER_PROCESSED
 
 
 @dataclass
@@ -25,8 +38,8 @@ class KafkaS3ConnectorConfig:
     flush_size: str
     region: Region = None  # region은 선택적으로 변경
     tasks: str = "4"
-    bootstrap_servers: str = "kafka1:19092,kafka2:29092,kafka3:39092"
-    kafka_connect_url: str = "http://localhost:8083"
+    bootstrap_servers: str = BOOTSTRAPSERVER
+    kafka_connect_url: str = KAFKA_CONNECT_URL
 
 
 class KafkaS3Connector:
@@ -65,7 +78,7 @@ class KafkaS3Connector:
                 "file.delim": "-",
                 "storage.class": "io.confluent.connect.s3.storage.S3Storage",
                 "format.class": "io.confluent.connect.s3.format.json.JsonFormat",
-                "store.url": "http://minio:9000",  # MinIO 주소
+                "store.url": MINIO_URL,  # MinIO 주소
                 "key.converter": "org.apache.kafka.connect.storage.StringConverter",
                 "value.converter": "org.apache.kafka.connect.json.JsonConverter",
                 "key.converter.schemas.enable": False,

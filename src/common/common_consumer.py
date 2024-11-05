@@ -159,12 +159,11 @@ class CommonConsumerSettingProcessor(AsyncKafkaConfigration):
 
         except KafkaError as e:
             await self.logger.error(f"Kafka 오류 발생: {str(e)}")
+            await self.partition_manager.stop_monitoring()
             raise
         except Exception as e:
             await self.logger.error(
                 f"예상치 못한 오류 발생: {str(e)}\n{traceback.format_exc()}",
             )
-            raise
-        finally:
-            # 파티션 모니터링 중지
             await self.partition_manager.stop_monitoring()
+            raise

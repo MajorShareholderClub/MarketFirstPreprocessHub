@@ -1,7 +1,7 @@
 from __future__ import annotations
 from types import TracebackType
 from datetime import datetime
-
+from setting.kafka_setting import BOOTSTRAPSERVER
 from type_model.kafka_model import KafkaDeadLetterTopic
 from aiokafka import AIOKafkaProducer
 import json
@@ -10,7 +10,7 @@ import json
 class DLTProducer:
     def __init__(self) -> None:
         self.producer = AIOKafkaProducer(
-            bootstrap_servers="kafka1:19092,kafka2:29092,kafka3:39092",
+            bootstrap_servers=BOOTSTRAPSERVER,
             value_serializer=lambda v: json.dumps(v).encode("utf-8"),
             acks="all",
             enable_idempotence=True,

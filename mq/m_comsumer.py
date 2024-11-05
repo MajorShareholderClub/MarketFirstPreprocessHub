@@ -12,6 +12,7 @@ from src.common.admin.logging.logger import AsyncLogger
 from type_model.kafka_model import KafkaConsumerConfig
 from mq.exception import handle_kafka_errors
 from mq.partition_manager import PartitionManager
+from setting.kafka_setting import BOOTSTRAPSERVER
 
 
 def default(obj: Any) -> str:
@@ -27,7 +28,7 @@ class AsyncKafkaConfigration:
         self,
         consumer_topic: str | None = None,
         group_id: str | None = None,
-        bootstrap_servers: str = "kafka1:19092,kafka2:29092,kafka3:39092",
+        bootstrap_servers: str = BOOTSTRAPSERVER,
         c_partition: int | None = None,
     ) -> None:
         self.bootstrap_servers: Final[str] = bootstrap_servers

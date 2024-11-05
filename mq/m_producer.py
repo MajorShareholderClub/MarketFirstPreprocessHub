@@ -7,6 +7,7 @@ from decimal import Decimal
 from aiokafka import AIOKafkaProducer
 from src.common.admin.logging.logger import AsyncLogger
 from mq.exception import handle_kafka_errors
+from setting.kafka_setting import BOOTSTRAPSERVER
 
 
 def default(obj: Any) -> str:
@@ -40,7 +41,7 @@ class AsyncKafkaProducer:
         """프로듀서 초기화 및 시작"""
         if self.producer is None:
             self.producer = AIOKafkaProducer(
-                bootstrap_servers="kafka1:19092,kafka2:29092,kafka3:39092",
+                bootstrap_servers=BOOTSTRAPSERVER,
                 key_serializer=lambda x: json.dumps(x).encode("utf-8"),
                 value_serializer=lambda x: json.dumps(x, default=default).encode(
                     "utf-8"

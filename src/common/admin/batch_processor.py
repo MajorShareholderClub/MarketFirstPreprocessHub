@@ -5,7 +5,7 @@ import time
 import psutil
 import pympler.asizeof
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import TypeVar, Callable, Any
 from aiokafka.errors import KafkaError
 
@@ -15,7 +15,6 @@ from type_model.kafka_model import KafkaConfigProducer
 from src.common.admin.metrics_manager import MetricsManager
 from src.common.admin.logging.logger import AsyncLogger
 from src.common.admin.time_stracker import TimeStacker, StackConfig
-from src.common.admin.metrics_manager import ProcessingMetrics
 
 
 T = TypeVar("T")
