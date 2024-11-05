@@ -154,12 +154,12 @@ class MetricsManager:
         }
 
         # 로깅을 위한 포맷팅
-        metrics_message = (
-            f"Minute Metrics - Topic: {topic}, Partition: {partition}\n"
-            f"Time: {metrics_data['timestamp']}\n"
-            f"Throughput: {metrics_data['throughput']} msgs/sec\n"
-            f"Avg Batch Size: {metrics_data['avg_batch_size']}\n"
-            f"Avg Processing Time: {metrics_data['avg_processing_time']}s\n"
-            f"Failure Rate: {metrics_data['failure_rate']}%\n"
-        )
+        metrics_message = {
+            "title": f"Minute Metrics - Topic: {topic}, Partition: {partition}",
+            "time": f"Time: {metrics_data['timestamp']}",
+            "throughput": f"Throughput: {metrics_data['throughput']} msgs/sec",
+            "avg_batch_size": f"Avg Batch Size: {metrics_data['avg_batch_size']}",
+            "avg_processing_time": f"Avg Processing Time: {metrics_data['avg_processing_time']}s",
+            "failure_rate": f"Failure Rate: {metrics_data['failure_rate']}%",
+        }
         await self.logger.debug({"metrics": metrics_data, "message": metrics_message})
