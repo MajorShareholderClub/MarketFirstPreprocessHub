@@ -45,8 +45,6 @@ class AsyncKafkaProducer:
                 value_serializer=lambda x: json.dumps(x, default=default).encode(
                     "utf-8"
                 ),
-                max_batch_size=1000000,
-                max_request_size=1000000,
                 enable_idempotence=True,
                 retry_backoff_ms=100,
                 acks="all",
