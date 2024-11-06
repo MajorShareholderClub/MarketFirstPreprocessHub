@@ -5,6 +5,8 @@ from typing import TypeVar, Generic
 from collections import deque
 from weakref import proxy
 import traceback
+from redis.asyncio import Redis
+
 
 import time
 import asyncio
@@ -134,6 +136,7 @@ class TimeStacker:
         self._running = False
         self._task: asyncio.Task | None = None
         self._lock = asyncio.Lock()
+        self._redis_client = Redis(host="localhost", port=6379, db=0)
         self._cleanup_counter = 0
         self._cleanup_threshold = 1000
 
@@ -161,8 +164,14 @@ class TimeStacker:
         """타임아웃된 스택 확인"""
         while self._running:
             try:
-                async with self._lock:
-                    for stack in list(self.stacks.values()):
+                for stack in list(self.stacks.values()):
+                    lock_key = f"lock:{stack.config.topic}:{stack.config.partition}"
+                    async with self._redis_client.lock(
+                        lock_key,
+                        timeout=5,
+                        blocking_timeout=3,
+                        thread_local=False,
+                    ):
                         if stack.should_flush():
                             await stack.flush()
                 await asyncio.sleep(0.5)  # 고정된 체크 주기
@@ -172,7 +181,14 @@ class TimeStacker:
 
     async def add_item(self, item: T, config: StackConfig) -> None:
         """아이템 추가"""
-        async with self._lock:
+        lock_key = f"lock:{config.topic}:{config.partition}"
+        
+        async with self._redis_client.lock(
+            lock_key,
+            timeout=5,
+            blocking_timeout=3,
+            thread_local=False,
+        ):
             stack: TimeStack = self.get_or_create_stack(config)
             stack.add_item(item)
 
