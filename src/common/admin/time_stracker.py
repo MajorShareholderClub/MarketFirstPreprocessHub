@@ -135,7 +135,6 @@ class TimeStacker:
         self.flush_handler = flush_handler
         self._running = False
         self._task: asyncio.Task | None = None
-        self._lock = asyncio.Lock()
         self._redis_client = Redis(host="localhost", port=6379, db=0)
         self._cleanup_counter = 0
         self._cleanup_threshold = 1000
@@ -182,7 +181,7 @@ class TimeStacker:
     async def add_item(self, item: T, config: StackConfig) -> None:
         """아이템 추가"""
         lock_key = f"lock:{config.topic}:{config.partition}"
-        
+
         async with self._redis_client.lock(
             lock_key,
             timeout=5,
