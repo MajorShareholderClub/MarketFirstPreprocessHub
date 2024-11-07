@@ -196,7 +196,7 @@ def _create_single_connector(config: KafkaS3ConnectorConfig) -> None:
 
 def create_all_connectors() -> None:
     """모든 커넥터를 생성하는 메인 함수"""
-    # create_regional_connectors()
+    create_regional_connectors()
     create_global_connectors()
 
 
