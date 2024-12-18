@@ -4,6 +4,7 @@ from abc import abstractmethod
 from typing import Final, TypeVar
 
 from aiokafka.errors import KafkaError
+from aiokafka import OffsetAndMetadata, TopicPartition
 from src.common.admin.logging.logger import AsyncLogger
 from type_model.ticker_model import CoinMarketCollection
 from type_model.orderbook_model import ProcessedOrderBook
@@ -107,6 +108,13 @@ class CommonConsumerSettingProcessor(AsyncKafkaConfigration):
                                 batch=batch,
                             ).to_dict()
                         )
+                    tp = TopicPartition(message.topic, message.partition)
+                    offset_metadata = OffsetAndMetadata(message.offset + 1, "processed")
+                    await self.consumer.commit({tp: offset_metadata})   
+                    
+                    # offset 기록                                     
+                    await self.logger.info(f"Committed offset: {message.offset + 1} with metadata: 'processed'")
+
                     batch.clear()
                     last_process_time = asyncio.get_event_loop().time()  # 배치 처리 후 시간 초기화
                     
